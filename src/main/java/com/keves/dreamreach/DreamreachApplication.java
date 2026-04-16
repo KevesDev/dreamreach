@@ -9,7 +9,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 public class DreamreachApplication {
 
     public static void main(String[] args) {
-
         SpringApplication.run(DreamreachApplication.class, args);
     }
 

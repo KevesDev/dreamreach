@@ -38,8 +38,6 @@ public class AuthService {
     private final RewardService rewardService;
     private final EmailService emailService;
 
-
-
     // Constructor Injection: Spring pulls the Repository and the BCrypt Bean from its toolbox
     public AuthService(PlayerAccountRepository playerAccountRepository,
                        PlayerProfileRepository playerProfileRepository,
@@ -124,8 +122,7 @@ public class AuthService {
         // save the token to the database
         tokenRepository.save(token);
 
-        // DEBUG: Since we don't have an email server hooked up yet,
-        // print it to the console so we can read it and test the API
+        // DEBUG: Printing to console for initial local testing
         System.out.println("========== [SECURITY] ==========");
         System.out.println("Generated verification code for " + request.getEmail() + ": " + code);
         System.out.println("================================");
@@ -189,8 +186,8 @@ public class AuthService {
         }
 
         /** --------------------------------------------------------
-         *  CHECK LOGIN STREAK
-         *  --------------------------------------------------------
+         * CHECK LOGIN STREAK
+         * --------------------------------------------------------
          */
         boolean isFirstLoginToday = false;
 
@@ -211,9 +208,14 @@ public class AuthService {
             if (daysBetween >= 1) {
                 // User is on a streak
                 account.setConsecutiveLogins(account.getConsecutiveLogins() + 1);
+                isFirstLoginToday = true;
+            } else if (daysBetween == 0) {
+                // User already logged in today
+                isFirstLoginToday = false;
             } else {
                 // User broke their streak, set to 1
                 account.setConsecutiveLogins(1);
+                isFirstLoginToday = true;
             }
         }
 
