@@ -6,6 +6,8 @@ import com.keves.dreamreach.entity.PlayerAccount;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.exception.ResourceNotFoundException;
 import com.keves.dreamreach.repository.PlayerAccountRepository;
+import com.keves.dreamreach.service.RewardService;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,11 +20,14 @@ public class PlayerController {
 
     private final PlayerAccountRepository accountRepository;
     private final GameEconomyConfig economyConfig;
+    private final RewardService rewardService;
 
     public PlayerController(PlayerAccountRepository accountRepository,
-                            GameEconomyConfig economyConfig) {
+                            GameEconomyConfig economyConfig,
+                            RewardService rewardService) {
         this.accountRepository = accountRepository;
         this.economyConfig = economyConfig;
+        this.rewardService = rewardService;
     }
 
     /**
@@ -64,5 +69,20 @@ public class PlayerController {
                 .build();
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reward/claim")
+    public ResponseEntity<?> claimDailyReward(Authentication authentication) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+
+        try {
+            // Tell the engine to process the claim
+            rewardService.claimReward(account);
+            return ResponseEntity.ok().build(); // 200 OK
+        } catch (IllegalStateException e) {
+            // If they trigger the spam protection or the reward expired, return a 400 Bad Request
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

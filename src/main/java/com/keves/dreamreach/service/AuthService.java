@@ -213,12 +213,15 @@ public class AuthService {
 
         // Stamp the account with the exact current second and commit to the database
         account.setLastLoginDate(Instant.now());
+
+        // Generate the track AND populate the PendingReward holding space
+        List<DailyReward> track = rewardService.getOrGenerateTrack(account);
+
+        // NOW save the account so the pending rewards and streaks are committed
         accountRepository.save(account);
 
+        // Issue token
         String token = jwtService.generateToken(account.getEmail());
-
-        // Generate the dynamic track
-        List<DailyReward> track = rewardService.getWeeklyTrack(account.getConsecutiveLogins());
 
         return new LoginResponse(token, "Bearer", isFirstLoginToday, account.getConsecutiveLogins(), track);
     }
