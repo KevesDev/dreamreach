@@ -8,6 +8,9 @@ COPY . .
 # Fix Windows line endings on the gradlew script
 RUN sed -i 's/\r$//' gradlew
 
+# Sanitize properties files to prevent CRLF characters from leaking into Spring properties
+RUN find src/main/resources -name "*.properties" -exec sed -i 's/\r$//' {} +
+
 # Grant execute permission to the gradlew script
 RUN chmod +x gradlew
 

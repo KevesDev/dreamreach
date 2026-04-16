@@ -1,3 +1,22 @@
+# Handle line endings automatically by default
+* text=auto
+
+# Enforce LF (Linux) endings for all source and configuration files
+# This prevents invisible \r characters from breaking the JavaMail parser
+*.java text eol=lf
+*.properties text eol=lf
+*.gradle text eol=lf
+*.yml text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+
+# Explicitly handle the Gradle wrapper
 /gradlew text eol=lf
 *.bat text eol=crlf
+
+# Binary files
 *.jar binary
+*.png binary
+*.svg binary
