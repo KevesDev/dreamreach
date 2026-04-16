@@ -1,6 +1,6 @@
-import { useEffect, useState} from "react";
-import { useNavigate } from 'react-router-dom';
-import api from '../api/client';
+import { useOutletContext } from 'react-router-dom';
+import {useEffect, useState} from "react";
+import LoginCalendarModal from '../components/LoginCalendarModal'; // Import the modal
 
 interface PlayerProfile {
     email: string;
@@ -9,58 +9,51 @@ interface PlayerProfile {
 }
 
 export default function DashboardView() {
-    const [profile, setProfile] = useState<PlayerProfile | null>(null);
-    const [error, setError] = useState('');
-    const navigate = useNavigate();
+    // Grab the profile passed down from Layout.tsx
+    const { profile } = useOutletContext<{ profile: PlayerProfile }>();
+
+    //------------- Login Streak Check Start -----------------------
+
+    // Check local storage to see if we should show the modal
+    const [showModal, setShowModal] = useState(false);
+    const [streak, setStreak] = useState(1);
+    const [rewardTrack, setRewardTrack] = useState([]);
 
     useEffect(() => {
-        const fetchProfile = async () => {
-            try {
-                // Notice we don't have to attach the token manually.
-                // The Axios interceptor we wrote does it for us!
-                const response = await api.get('/player/me');
-                setProfile(response.data);
-            } catch (err) {
-                // If the token is missing, expired, or invalid, kick them out
-                setError('Session expired or invalid. Please log in again.');
-                localStorage.removeItem('dreamreach_token');
-                setTimeout(() => navigate('/login'), 2000);
-            }
-        };
+        const isFirstLogin = localStorage.getItem('dreamreach_first_login') === 'true';
+        if (isFirstLogin) {
+            const savedStreak = parseInt(localStorage.getItem('dreamreach_streak') || '1', 10);
+            const savedTrack = JSON.parse(localStorage.getItem('dreamreach_reward_track') || '[]');
 
-        fetchProfile();
-    }, [navigate]);
+            setStreak(savedStreak);
+            setRewardTrack(savedTrack);
+            setShowModal(true);
+        }
+    }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('dreamreach_token');
-        navigate('/login');
+    const handleCloseModal = () => {
+        setShowModal(false);
+        // Remove the flag so it doesn't trigger again today
+        localStorage.removeItem('dreamreach_first_login');
     };
 
-    if (error) {
-        return <div style={{ textAlign: 'center', margin: '50px auto', color: 'red', fontFamily: 'sans-serif' }}>{error}</div>;
-    }
-
-    if (!profile) {
-        return <div style={{ textAlign: 'center', margin: '50px auto', fontFamily: 'sans-serif' }}>Loading profile secure data...</div>;
-    }
+    // ------------ Login Streak Check End -------------------------
 
     return (
-        <div style={{ maxWidth: '500px', margin: '50px auto', fontFamily: 'sans-serif', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2>Player Profile</h2>
-                <button onClick={handleLogout} style={{ padding: '8px 16px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                    Logout
-                </button>
-            </div>
+        <div>
+            {/* Render the modal if the state is true */}
+            {showModal && <LoginCalendarModal streak={streak} track={rewardTrack} onClose={handleCloseModal} />}
 
-            <div style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '4px', border: '1px solid #eee' }}>
-                <p style={{ margin: '10px 0' }}><strong>Display Name:</strong> {profile.displayName}</p>
+            <h2 style={{ marginTop: 0 }}>Overview</h2>
+
+            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0', maxWidth: '600px' }}>
+                <h3 style={{ marginTop: 0, color: '#334155' }}>Account Status</h3>
                 <p style={{ margin: '10px 0' }}><strong>Email:</strong> {profile.email}</p>
-                <p style={{ margin: '10px 0' }}><strong>PvP Status:</strong> {profile.pvpEnabled ? 'Enabled' : 'Protected'}</p>
+                <p style={{ margin: '10px 0' }}><strong>PvP Status:</strong> {profile.pvpEnabled ? '🔴 Enabled' : '🟢 Protected'}</p>
             </div>
 
-            <p style={{ marginTop: '20px', fontSize: '0.8rem', color: '#666', textAlign: 'center' }}>
-                You are securely authenticated.
+            <p style={{ marginTop: '20px', color: '#64748b' }}>
+                Welcome, commander. Select a destination from the menu.
             </p>
         </div>
     );

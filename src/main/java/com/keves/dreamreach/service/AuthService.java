@@ -1,5 +1,6 @@
 package com.keves.dreamreach.service;
 
+import com.keves.dreamreach.dto.DailyReward;
 import com.keves.dreamreach.dto.LoginRequest;
 import com.keves.dreamreach.dto.LoginResponse;
 import com.keves.dreamreach.dto.RegisterRequest;
@@ -17,6 +18,11 @@ import com.keves.dreamreach.util.VerificationCodeGenerator;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 /**
  * This service will coordinate the "Check -> Scramble -> Save" workflow.
@@ -31,6 +37,7 @@ public class AuthService {
     private final VerificationTokenRepository tokenRepository;
     private final VerificationCodeGenerator codeGenerator;
     private final JwtService jwtService;
+    private final RewardService rewardService;
 
 
 
@@ -41,7 +48,8 @@ public class AuthService {
                        DisplayNameGenerator nameGenerator,
                        VerificationTokenRepository tokenRepository,
                        VerificationCodeGenerator codeGenerator,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       RewardService rewardService) {
         this.accountRepository = playerAccountRepository;
         this.profileRepository = playerProfileRepository;
         this.passwordEncoder = passwordEncoder;
@@ -49,6 +57,7 @@ public class AuthService {
         this.tokenRepository = tokenRepository;
         this.codeGenerator = codeGenerator;
         this.jwtService = jwtService;
+        this.rewardService = rewardService;
     }
 
     @Transactional // Ensures database integrity—if any step fails, the entire transaction rolls back
@@ -131,6 +140,7 @@ public class AuthService {
     /**
      * Authenticates user credentials and issues a JSON Web Token upon success.
      * Enforces account verification status before granting access.
+     * Calculates daily login streaks.
      */
     public LoginResponse login(LoginRequest request) {
 
@@ -146,8 +156,44 @@ public class AuthService {
             throw new IllegalStateException("Account requires email verification before login is permitted.");
         }
 
+        /** --------------------------------------------------------
+         *  CHECK LOGIN STREAK
+         *  --------------------------------------------------------
+         */
+        boolean isFirstLoginToday = false;
+
+        // Calculate the current 'server day' from UTC
+        LocalDate serverToday = LocalDate.now(ZoneOffset.UTC);
+
+        if (account.getLastLoginDate() == null) {
+            // this is the first time this account has logged in
+            account.setConsecutiveLogins(1);
+            isFirstLoginToday = true;
+        } else {
+            // Convert the exact historical login second into a flat calendar day in UTC
+            LocalDate lastLoginDay = LocalDate.ofInstant(account.getLastLoginDate(), ZoneOffset.UTC);
+
+            // Calculate exactly how many calendar days have passed
+            long daysBetween = ChronoUnit.DAYS.between(lastLoginDay, serverToday);
+
+            if (daysBetween >= 1) {
+                // User is on a streak
+                account.setConsecutiveLogins(account.getConsecutiveLogins() + 1);
+            } else {
+                // User broke their streak, set to 1
+                account.setConsecutiveLogins(1);
+            }
+        }
+
+        // Stamp the account with the exact current second and commit to the database
+        account.setLastLoginDate(Instant.now());
+        accountRepository.save(account);
+
         String token = jwtService.generateToken(account.getEmail());
 
-        return new LoginResponse(token, "Bearer");
+        // Generate the dynamic track
+        List<DailyReward> track = rewardService.getWeeklyTrack(account.getConsecutiveLogins());
+
+        return new LoginResponse(token, "Bearer", isFirstLoginToday, account.getConsecutiveLogins(), track);
     }
 }
