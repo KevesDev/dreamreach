@@ -5,8 +5,11 @@ WORKDIR /app
 # Copy all project files into the container
 COPY . .
 
-# Fix Windows line endings on the gradlew script (just like GitHub Actions)
+# Fix Windows line endings on the gradlew script
 RUN sed -i 's/\r$//' gradlew
+
+# Grant execute permission to the gradlew script
+RUN chmod +x gradlew
 
 # Compile the Spring Boot application
 RUN ./gradlew clean build -x test
