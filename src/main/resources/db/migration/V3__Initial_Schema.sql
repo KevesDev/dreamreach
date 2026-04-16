@@ -1,4 +1,4 @@
--- V2__Initial_Schema.sql
+-- V3__Initial_Schema.sql
 -- Exact translation of current Java Entities to PostgreSQL schema.
 
 -- 1. Create the base authentication account (PlayerAccount)
@@ -7,23 +7,14 @@ CREATE TABLE player_account (
                                 email VARCHAR(255) NOT NULL UNIQUE,
                                 password VARCHAR(255) NOT NULL,
                                 is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
--- V2__Initial_Schema.sql
--- Exact translation of current Java Entities to PostgreSQL schema.
-
--- 1. Create the base authentication account (PlayerAccount)
-                                CREATE TABLE player_account (
-    id UUID PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-    consecutive_logins INT NOT NULL DEFAULT 0,
-    last_login_date TIMESTAMP(6) WITH TIME ZONE,
-    last_claim_date TIMESTAMP(6) WITH TIME ZONE,
+                                consecutive_logins INT NOT NULL DEFAULT 0,
+                                last_login_date TIMESTAMP(6) WITH TIME ZONE,
+                                last_claim_date TIMESTAMP(6) WITH TIME ZONE,
 
     -- Embedded PendingReward fields
-    reward_type VARCHAR(50),
-    amount INT,
-    reason VARCHAR(255)
+                                reward_type VARCHAR(50),
+                                amount INT,
+                                reason VARCHAR(255)
 );
 
 -- 2. Create Alliances (Must exist before Profiles can join them)
