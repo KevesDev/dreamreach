@@ -37,6 +37,12 @@ public class PlayerAccount {
     @Column(name = "consecutive_logins", nullable = false)
     private int consecutiveLogins = 0;
 
+    @Column(name = "last_claim_date")
+    private Instant lastClaimDate;
+
+    @Embedded
+    private PendingReward pendingReward;
+
     /**
      * mappedBy = "account": This tells Spring that the 'PlayerProfile'
      * entity is the one that physically holds the foreign key column.

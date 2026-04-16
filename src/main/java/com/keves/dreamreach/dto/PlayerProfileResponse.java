@@ -14,4 +14,15 @@ public class PlayerProfileResponse {
     private String email;
     private String displayName;
     private boolean pvpEnabled;
+
+    // Resources
+    private int food;
+    private int wood;
+    private int stone;
+    private int gold;
+    private int gems;
+
+    // Population metrics needed for the HUD
+    private int totalPopulation;
+    private int maxPopulation; // Derived from houses
 }

@@ -61,4 +61,13 @@ public class PlayerProfile {
     @OneToOne
     @JoinColumn(name = "account_id", nullable = false)
     private PlayerAccount account;
+
+    @OneToOne(mappedBy = "profile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private PlayerResources resources;
+
+    @OneToOne(mappedBy = "profile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private PlayerPopulation population;
+
+    @OneToOne(mappedBy = "profile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private PlayerStructures structures;
 }

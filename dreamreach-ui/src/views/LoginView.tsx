@@ -22,6 +22,11 @@ export default function LoginView() {
             // Securely store the JWT wristband
             localStorage.setItem('dreamreach_token', response.data.token);
 
+            // Store the streak data for the dashboard modal
+            localStorage.setItem('dreamreaach_streak', response.data.consecutiveLogins);
+            localStorage.setItem('dreamreach_first_login', response.data.isFirstLoginToday);
+            localStorage.setItem('dreamreach_reward_track', JSON.stringify(response.data.rewardTrack));
+
             // Redirect to the protected dashboard
             navigate('/dashboard');
 
