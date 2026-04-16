@@ -1,4 +1,4 @@
--- V1__Initial_Schema.sql
+-- V2__Initial_Schema.sql
 -- Exact translation of current Java Entities to PostgreSQL schema.
 
 -- 1. Create the base authentication account (PlayerAccount)
@@ -7,21 +7,32 @@ CREATE TABLE player_account (
                                 email VARCHAR(255) NOT NULL UNIQUE,
                                 password VARCHAR(255) NOT NULL,
                                 is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-                                consecutive_logins INT NOT NULL DEFAULT 0,
-                                last_login_date TIMESTAMP(6) WITH TIME ZONE,
-                                last_claim_date TIMESTAMP(6) WITH TIME ZONE,
+-- V2__Initial_Schema.sql
+-- Exact translation of current Java Entities to PostgreSQL schema.
+
+-- 1. Create the base authentication account (PlayerAccount)
+                                CREATE TABLE player_account (
+    id UUID PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    consecutive_logins INT NOT NULL DEFAULT 0,
+    last_login_date TIMESTAMP(6) WITH TIME ZONE,
+    last_claim_date TIMESTAMP(6) WITH TIME ZONE,
 
     -- Embedded PendingReward fields
-                                reward_type VARCHAR(50),
-                                amount INT,
-                                reason VARCHAR(255)
+    reward_type VARCHAR(50),
+    amount INT,
+    reason VARCHAR(255)
 );
 
 -- 2. Create Alliances (Must exist before Profiles can join them)
 CREATE TABLE alliance (
                           id UUID PRIMARY KEY,
-                          name VARCHAR(50) NOT NULL UNIQUE,
-                          description TEXT,
+                          name VARCHAR(100) NOT NULL UNIQUE,
+                          tag VARCHAR(10) NOT NULL UNIQUE,
+                          level INT NOT NULL,
+                          description VARCHAR(255),
                           is_alliance_pvp_enabled BOOLEAN NOT NULL DEFAULT FALSE
 );
 
@@ -77,8 +88,8 @@ CREATE TABLE player_structures (
 CREATE TABLE character_template (
                                     id UUID PRIMARY KEY,
                                     name VARCHAR(100) NOT NULL UNIQUE,
-                                    rarity VARCHAR(255) NOT NULL, -- Stored as String due to @Enumerated(EnumType.STRING)
-                                    dnd_class VARCHAR(255) NOT NULL, -- Stored as String due to @Enumerated(EnumType.STRING)
+                                    rarity VARCHAR(255) NOT NULL,
+                                    dnd_class VARCHAR(255) NOT NULL,
                                     base_str INT NOT NULL DEFAULT 10,
                                     base_dex INT NOT NULL DEFAULT 10,
                                     base_con INT NOT NULL DEFAULT 10,
