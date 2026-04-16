@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -20,7 +21,7 @@ public class PlayerAccount {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    //// This will hold the BCrypt hash
+    //// This holds the BCrypt hash
     @Column(nullable = false)
     private String password;
 
@@ -29,6 +30,12 @@ public class PlayerAccount {
 
     @Column(nullable = false)
     boolean isEnabled = false; // this gets toggled when user verifies email for a new account.
+
+    @Column(name = "last_login_date")
+    private Instant lastLoginDate;
+
+    @Column(name = "consecutive_logins", nullable = false)
+    private int consecutiveLogins = 0;
 
     /**
      * mappedBy = "account": This tells Spring that the 'PlayerProfile'
