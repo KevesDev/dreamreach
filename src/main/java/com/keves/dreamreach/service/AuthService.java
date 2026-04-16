@@ -1,0 +1,153 @@
+package com.keves.dreamreach.service;
+
+import com.keves.dreamreach.dto.LoginRequest;
+import com.keves.dreamreach.dto.LoginResponse;
+import com.keves.dreamreach.dto.RegisterRequest;
+import com.keves.dreamreach.entity.PlayerAccount;
+import com.keves.dreamreach.entity.PlayerProfile;
+import com.keves.dreamreach.entity.VerificationToken;
+import com.keves.dreamreach.exception.DuplicateResourceException;
+import com.keves.dreamreach.exception.ResourceNotFoundException;
+import com.keves.dreamreach.repository.PlayerAccountRepository;
+import com.keves.dreamreach.repository.PlayerProfileRepository;
+import com.keves.dreamreach.repository.VerificationTokenRepository;
+import com.keves.dreamreach.util.DisplayNameGenerator;
+import com.keves.dreamreach.util.JwtService;
+import com.keves.dreamreach.util.VerificationCodeGenerator;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * This service will coordinate the "Check -> Scramble -> Save" workflow.
+ */
+@Service
+public class AuthService {
+
+    private final PlayerAccountRepository accountRepository;
+    private final PlayerProfileRepository profileRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final DisplayNameGenerator nameGenerator;
+    private final VerificationTokenRepository tokenRepository;
+    private final VerificationCodeGenerator codeGenerator;
+    private final JwtService jwtService;
+
+
+
+    // Constructor Injection: Spring pulls the Repository and the BCrypt Bean from its toolbox
+    public AuthService(PlayerAccountRepository playerAccountRepository,
+                       PlayerProfileRepository playerProfileRepository,
+                       PasswordEncoder passwordEncoder,
+                       DisplayNameGenerator nameGenerator,
+                       VerificationTokenRepository tokenRepository,
+                       VerificationCodeGenerator codeGenerator,
+                       JwtService jwtService) {
+        this.accountRepository = playerAccountRepository;
+        this.profileRepository = playerProfileRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.nameGenerator = nameGenerator;
+        this.tokenRepository = tokenRepository;
+        this.codeGenerator = codeGenerator;
+        this.jwtService = jwtService;
+    }
+
+    @Transactional // Ensures database integrity—if any step fails, the entire transaction rolls back
+    public void register(RegisterRequest request) {
+        if (accountRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateResourceException("An account with this email already exists.");
+        }
+
+        String uniqueName = getGuaranteedUniqueName();
+
+        PlayerAccount newAccount = new PlayerAccount();
+        newAccount.setEmail(request.getEmail());
+        newAccount.setPassword(passwordEncoder.encode(request.getPassword()));
+        newAccount.setEnabled(false);
+
+        PlayerProfile profile = new PlayerProfile();
+        profile.setDisplayName(uniqueName);
+
+        profile.setAccount(newAccount);
+        newAccount.setProfile(profile);
+
+        // save the new account to the database. Since we are using Cascade
+        // between the profile and account, the profile will also automatically be saved.
+        accountRepository.save(newAccount);
+
+        // generate the 6-digit code that will be sent to email
+        String code = codeGenerator.generateCode();
+
+        // build the token entity
+        VerificationToken token = new VerificationToken();
+        token.setCode(code);
+        token.setExpiryDate(java.time.LocalDateTime.now().plusHours(24)); // expiration time
+        token.setAccount(newAccount); // link token to new account
+
+        // save the token to the database
+        tokenRepository.save(token);
+
+        // DEBUG: Since we don't have an email server hooked up yet,
+        // print it to the console so we can read it and test the API
+        System.out.println("========== [SECURITY] ==========");
+        System.out.println("Generated verification code for " + request.getEmail() + ": " + code);
+        System.out.println("================================");
+    }
+
+    /**
+     * Loops until the injected generator provides a name not found in the DB.
+     */
+    private String getGuaranteedUniqueName() {
+        String candidateName;
+        do {
+            candidateName = nameGenerator.generateRandomName();
+        } while (profileRepository.existsByDisplayName(candidateName));
+
+        return candidateName;
+    }
+
+    /**
+     * Validate 6-digit emailed code and unlock the associated account.
+     */
+    @Transactional
+    public void verifyEmail(String code) {
+        // find the token. If it doesn't exist, throw an error.
+        VerificationToken token  = tokenRepository.findByCode(code)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid verification code."));
+
+        // Check if the token is expired.
+        if (token.getExpiryDate().isBefore(java.time.LocalDateTime.now())) {
+            throw new IllegalArgumentException("Verification code has expired. Please request a new code.");
+        }
+
+        // unlock the account
+        PlayerAccount account = token.getAccount();
+        account.setEnabled(true);
+        accountRepository.save(account);
+
+        // clean up - delete the token so it can't be used twice.
+        tokenRepository.delete(token);
+    }
+
+    /**
+     * Authenticates user credentials and issues a JSON Web Token upon success.
+     * Enforces account verification status before granting access.
+     */
+    public LoginResponse login(LoginRequest request) {
+
+        PlayerAccount account = accountRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with the provided email."));
+
+        // uses passwordEncoder to compare raw passwords against the stored BCrypt hash
+        if (!passwordEncoder.matches(request.getPassword(), account.getPassword())) {
+            throw new IllegalArgumentException("Invalid credentials provided.");
+        }
+
+        if (!account.isEnabled()) {
+            throw new IllegalStateException("Account requires email verification before login is permitted.");
+        }
+
+        String token = jwtService.generateToken(account.getEmail());
+
+        return new LoginResponse(token, "Bearer");
+    }
+}
