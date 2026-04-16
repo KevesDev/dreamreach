@@ -6,6 +6,13 @@ interface PlayerProfile {
     email: string;
     displayName: string;
     pvpEnabled: boolean;
+    food: number;
+    wood: number;
+    stone: number;
+    gold: number;
+    gems: number;
+    totalPopulation: number;
+    maxPopulation: number;
 }
 
 export default function Layout() {
@@ -40,11 +47,19 @@ export default function Layout() {
                 <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
                     {profile.displayName} <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '10px' }}>Lv. 1</span>
                 </div>
-                <div style={{ display: 'flex', gap: '20px', fontSize: '0.9rem' }}>
-                    <div title="Population">👥 10/25</div>
-                    <div title="Gold">💰 500</div>
-                    <div title="Gems">💎 50</div>
-                    <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}>Logout</button>
+
+                {/* LIVE ECONOMY METRICS */}
+                <div style={{ display: 'flex', gap: '20px', fontSize: '0.9rem', alignItems: 'center' }}>
+                    <div title="Population" style={{ color: profile.totalPopulation >= profile.maxPopulation ? '#ef4444' : 'inherit' }}>
+                        👥 {profile.totalPopulation}/{profile.maxPopulation}
+                    </div>
+                    <div title="Food">🌾 {profile.food}</div>
+                    <div title="Wood">🪵 {profile.wood}</div>
+                    <div title="Stone">𪨧 {profile.stone}</div>
+                    <div title="Gold" style={{ color: '#fbbf24', fontWeight: 'bold' }}>💰 {profile.gold}</div>
+                    <div title="Gems" style={{ color: '#60a5fa', fontWeight: 'bold' }}>💎 {profile.gems}</div>
+
+                    <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold', marginLeft: '10px' }}>Logout</button>
                 </div>
             </header>
 

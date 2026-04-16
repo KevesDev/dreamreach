@@ -4,9 +4,7 @@ import com.keves.dreamreach.dto.DailyReward;
 import com.keves.dreamreach.dto.LoginRequest;
 import com.keves.dreamreach.dto.LoginResponse;
 import com.keves.dreamreach.dto.RegisterRequest;
-import com.keves.dreamreach.entity.PlayerAccount;
-import com.keves.dreamreach.entity.PlayerProfile;
-import com.keves.dreamreach.entity.VerificationToken;
+import com.keves.dreamreach.entity.*;
 import com.keves.dreamreach.exception.DuplicateResourceException;
 import com.keves.dreamreach.exception.ResourceNotFoundException;
 import com.keves.dreamreach.repository.PlayerAccountRepository;
@@ -78,6 +76,34 @@ public class AuthService {
 
         profile.setAccount(newAccount);
         newAccount.setProfile(profile);
+
+        // Provision the Stockpile (Starting Resources)
+        PlayerResources resources = new PlayerResources();
+        resources.setFood(150);
+        resources.setWood(100);
+        resources.setStone(50);
+        resources.setGold(0);
+        resources.setGems(0);
+        resources.setProfile(profile);
+        profile.setResources(resources);
+
+        // Provision the Workforce (Starting Population)
+        PlayerPopulation population = new PlayerPopulation();
+        population.setHappiness(50); // Neutral starting mood
+        population.setIdlePeasants(5); // 5 starting workers
+        population.setHunters(0);
+        population.setWoodcutters(0);
+        population.setStoneworkers(0);
+        population.setProfile(profile);
+        profile.setPopulation(population);
+
+        // Provision the Settlement (Starting Architecture)
+        PlayerStructures structures = new PlayerStructures();
+        structures.setHouses(1); // 1 starting house so the 5 peasants have capacity
+        structures.setTowers(0);
+        structures.setBakeries(0);
+        structures.setProfile(profile);
+        profile.setStructures(structures);
 
         // save the new account to the database. Since we are using Cascade
         // between the profile and account, the profile will also automatically be saved.
