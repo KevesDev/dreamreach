@@ -5,6 +5,8 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * The Centralized Economy Engine Ruleset.
  * These defaults can be safely overwritten in application.properties
@@ -35,4 +37,9 @@ public class GameEconomyConfig {
     // --- COMBAT / DEFENSE ---
     private int baseDefense = 10;
     private int defensePerTower = 25;
+
+    // --- DAILY LOGIN REWARD CURVES ---
+    // Maps to Days 1 through 6. Day 7 is handled independently as the Summoning drop.
+    private List<Integer> dailyResourceCurve = List.of(10, 20, 35, 55, 80, 110);
+    private List<Integer> dailyGoldCurve = List.of(0, 0, 10, 25, 50, 100);
 }

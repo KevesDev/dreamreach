@@ -1,6 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import {useEffect, useState} from "react";
-import LoginCalendarModal from '../components/LoginCalendarModal'; // Import the modal
+import LoginCalendarModal from '../components/LoginCalendarModal';
 
 interface PlayerProfile {
     email: string;
@@ -9,12 +9,8 @@ interface PlayerProfile {
 }
 
 export default function DashboardView() {
-    // Grab the profile passed down from Layout.tsx
     const { profile } = useOutletContext<{ profile: PlayerProfile }>();
 
-    //------------- Login Streak Check Start -----------------------
-
-    // Check local storage to see if we should show the modal
     const [showModal, setShowModal] = useState(false);
     const [streak, setStreak] = useState(1);
     const [rewardTrack, setRewardTrack] = useState([]);
@@ -33,15 +29,12 @@ export default function DashboardView() {
 
     const handleCloseModal = () => {
         setShowModal(false);
-        // Remove the flag so it doesn't trigger again today
         localStorage.removeItem('dreamreach_first_login');
+        window.location.reload();
     };
-
-    // ------------ Login Streak Check End -------------------------
 
     return (
         <div>
-            {/* Render the modal if the state is true */}
             {showModal && <LoginCalendarModal streak={streak} track={rewardTrack} onClose={handleCloseModal} />}
 
             <h2 style={{ marginTop: 0 }}>Overview</h2>

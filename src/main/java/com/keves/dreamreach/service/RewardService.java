@@ -1,5 +1,6 @@
 package com.keves.dreamreach.service;
 
+import com.keves.dreamreach.config.GameEconomyConfig;
 import com.keves.dreamreach.dto.DailyReward;
 import com.keves.dreamreach.entity.PendingReward;
 import com.keves.dreamreach.entity.PlayerAccount;
@@ -11,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -20,15 +20,16 @@ import java.util.Random;
 public class RewardService {
 
     private final PlayerAccountRepository accountRepository;
+    private final GameEconomyConfig economyConfig;
     private final Random random = new Random();
 
-    public RewardService(PlayerAccountRepository accountRepository) {
+    public RewardService(PlayerAccountRepository accountRepository, GameEconomyConfig economyConfig) {
         this.accountRepository = accountRepository;
+        this.economyConfig = economyConfig;
     }
 
     /**
-     * Replaces getWeeklyTrack.
-     * Checks the database holding space. If empty or expired, rolls TRUE RNG and saves it.
+     * Checks the database holding space. If empty or expired, rolls true RNG and saves it.
      */
     public List<DailyReward> getOrGenerateTrack(PlayerAccount account) {
         List<DailyReward> track = new ArrayList<>();
@@ -48,24 +49,21 @@ public class RewardService {
                 continue;
             }
 
-            // Preserving your exact math rules
-            int baseAmount = i * 5;
-            int goldAmount = i >= 3 ? i * 25 : 0;
+            int baseAmount = economyConfig.getDailyResourceCurve().get(i - 1);
+            int goldAmount = economyConfig.getDailyGoldCurve().get(i - 1);
 
             if (i == visualStreak && !alreadyClaimed) {
                 if (needsNewRoll) {
-                    // 1. ROLL TRUE RNG
                     DailyReward newReward = new DailyReward(
                             i,
                             applyRng(baseAmount),
                             applyRng(baseAmount),
                             applyRng(baseAmount),
-                            goldAmount > 0 ? applyRng(goldAmount) : 0,
+                            applyRng(goldAmount),
                             false
                     );
                     track.add(newReward);
 
-                    // 2. SAVE TO HOLDING SPACE
                     PendingReward newPending = new PendingReward();
                     newPending.setPendingFood(newReward.getFood());
                     newPending.setPendingWood(newReward.getWood());
@@ -75,7 +73,6 @@ public class RewardService {
                     newPending.setPendingDate(serverToday);
                     account.setPendingReward(newPending);
                 } else {
-                    // 3. RECONSTRUCT FROM DATABASE
                     track.add(new DailyReward(
                             i,
                             pending.getPendingFood(),
@@ -92,9 +89,6 @@ public class RewardService {
         return track;
     }
 
-    /**
-     * Securely moves the pending rewards into the actual inventory.
-     */
     @Transactional
     public void claimReward(PlayerAccount account) {
         PendingReward pending = account.getPendingReward();
@@ -116,18 +110,19 @@ public class RewardService {
         resources.setStone(resources.getStone() + pending.getPendingStone());
         resources.setGold(resources.getGold() + pending.getPendingGold());
 
-        // Wipe holding space and update spam tracker
         account.setLastClaimDate(Instant.now());
         account.setPendingReward(null);
         accountRepository.save(account);
     }
 
+    /**
+     * Applies a standard variance to the base reward.
+     * Enforces a minimum variance so small bases still exhibit noticeable RNG.
+     */
     private int applyRng(int base) {
-        int variance = (int) (base * 0.10);
+        if (base <= 0) return 0;
 
-        // Prevent random.nextInt(0) if variance ends up being 0 due to very small base numbers
-        if (variance == 0) return base;
-
+        int variance = Math.max(3, (int) (base * 0.20));
         return base - variance + random.nextInt((variance * 2) + 1);
     }
 }
