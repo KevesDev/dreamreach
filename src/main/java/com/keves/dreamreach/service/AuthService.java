@@ -36,6 +36,7 @@ public class AuthService {
     private final VerificationCodeGenerator codeGenerator;
     private final JwtService jwtService;
     private final RewardService rewardService;
+    private final EmailService emailService;
 
 
 
@@ -47,7 +48,8 @@ public class AuthService {
                        VerificationTokenRepository tokenRepository,
                        VerificationCodeGenerator codeGenerator,
                        JwtService jwtService,
-                       RewardService rewardService) {
+                       RewardService rewardService,
+                       EmailService emailService) {
         this.accountRepository = playerAccountRepository;
         this.profileRepository = playerProfileRepository;
         this.passwordEncoder = passwordEncoder;
@@ -56,6 +58,7 @@ public class AuthService {
         this.codeGenerator = codeGenerator;
         this.jwtService = jwtService;
         this.rewardService = rewardService;
+        this.emailService = emailService;
     }
 
     @Transactional // Ensures database integrity—if any step fails, the entire transaction rolls back
@@ -126,6 +129,9 @@ public class AuthService {
         System.out.println("========== [SECURITY] ==========");
         System.out.println("Generated verification code for " + request.getEmail() + ": " + code);
         System.out.println("================================");
+
+        // Asynchronous dispatch to avoid blocking the API response
+        emailService.sendVerificationEmail(newAccount.getEmail(), code);
     }
 
     /**
