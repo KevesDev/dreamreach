@@ -16,4 +16,5 @@ public interface PlayerProfileRepository extends JpaRepository<PlayerProfile, UU
     // Translates to: SELECT * FROM PlayerProfile WHERE display_name = ?
     Optional<PlayerProfile> findByDisplayName(String displayName);
 
+    boolean existsByDisplayName(String displayName);
 }

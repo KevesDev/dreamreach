@@ -53,4 +53,12 @@ public class PlayerProfile {
 
         return this.isPersonalPvpEnabled;
     }
+
+    /**
+     * @JoinColumn: This physically creates the 'account_id' column
+     * in the player_profile table. This is the "Bridge".
+     */
+    @OneToOne
+    @JoinColumn(name = "account_id", nullable = false)
+    private PlayerAccount account;
 }
