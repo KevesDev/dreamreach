@@ -17,6 +17,9 @@ public class PlayerStructures {
     @Column(nullable = false) private int towers = 0;
     @Column(nullable = false) private int bakeries = 0;
 
+    // THE ONLY NEEDED ADDITION
+    @Column(name = "hunting_lodges", nullable = false) private int huntingLodges = 0;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id", nullable = false, unique = true)
     private PlayerProfile profile;
