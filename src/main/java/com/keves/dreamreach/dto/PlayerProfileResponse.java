@@ -22,6 +22,16 @@ public class PlayerProfileResponse {
     private int gold;
     private int gems;
 
+    // Rates for the HUD ticker
+    private int foodRate;
+    private int woodRate;
+    private int stoneRate;
+
+    // Pending amounts for the Ledger
+    private int pendingFood;
+    private int pendingWood;
+    private int pendingStone;
+
     // Population metrics needed for the HUD
     private int totalPopulation;
     private int maxPopulation; // Derived from houses
