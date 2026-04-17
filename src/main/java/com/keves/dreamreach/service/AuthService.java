@@ -1,5 +1,6 @@
 package com.keves.dreamreach.service;
 
+import com.keves.dreamreach.config.GameEconomyConfig;
 import com.keves.dreamreach.dto.DailyReward;
 import com.keves.dreamreach.dto.LoginRequest;
 import com.keves.dreamreach.dto.LoginResponse;
@@ -37,6 +38,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final RewardService rewardService;
     private final EmailService emailService;
+    private final GameEconomyConfig economyConfig;
 
     // Constructor Injection: Spring pulls the Repository and the BCrypt Bean from its toolbox
     public AuthService(PlayerAccountRepository playerAccountRepository,
@@ -47,7 +49,8 @@ public class AuthService {
                        VerificationCodeGenerator codeGenerator,
                        JwtService jwtService,
                        RewardService rewardService,
-                       EmailService emailService) {
+                       EmailService emailService,
+                       GameEconomyConfig economyConfig) {
         this.accountRepository = playerAccountRepository;
         this.profileRepository = playerProfileRepository;
         this.passwordEncoder = passwordEncoder;
@@ -57,6 +60,7 @@ public class AuthService {
         this.jwtService = jwtService;
         this.rewardService = rewardService;
         this.emailService = emailService;
+        this.economyConfig = economyConfig;
     }
 
     @Transactional // Ensures database integrity—if any step fails, the entire transaction rolls back
@@ -80,18 +84,18 @@ public class AuthService {
 
         // Provision the Stockpile (Starting Resources)
         PlayerResources resources = new PlayerResources();
-        resources.setFood(150);
-        resources.setWood(100);
-        resources.setStone(50);
-        resources.setGold(0);
-        resources.setGems(0);
+        resources.setFood(economyConfig.getStartingFood());
+        resources.setWood(economyConfig.getStartingWood());
+        resources.setStone(economyConfig.getStartingStone());
+        resources.setGold(economyConfig.getStartingGold());
+        resources.setGems(economyConfig.getStartingGems());
         resources.setProfile(profile);
         profile.setResources(resources);
 
         // Provision the Workforce (Starting Population)
         PlayerPopulation population = new PlayerPopulation();
-        population.setHappiness(50); // Neutral starting mood
-        population.setIdlePeasants(5); // 5 starting workers
+        population.setHappiness(economyConfig.getStartingHappiness());
+        population.setIdlePeasants(economyConfig.getStartingPeasants());
         population.setHunters(0);
         population.setWoodcutters(0);
         population.setStoneworkers(0);
@@ -100,9 +104,10 @@ public class AuthService {
 
         // Provision the Settlement (Starting Architecture)
         PlayerStructures structures = new PlayerStructures();
-        structures.setHouses(1); // 1 starting house so the 5 peasants have capacity
-        structures.setTowers(0);
-        structures.setBakeries(0);
+        structures.setHouses(economyConfig.getStartingHouses());
+        structures.setTowers(economyConfig.getStartingTowers());
+        structures.setBakeries(economyConfig.getStartingBakeries());
+        structures.setHuntingLodges(economyConfig.getStartingLodges());
         structures.setProfile(profile);
         profile.setStructures(structures);
 
