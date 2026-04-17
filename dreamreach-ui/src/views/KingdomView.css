@@ -3,68 +3,166 @@
 .kingdom-container {
     display: flex;
     height: 100%;
-    /* Negative margin to offset the main content padding and go edge-to-edge */
-    margin: calc(var(--space-md) * -1);
+    margin: calc(var(--space-md) * -1); /* Edge to edge */
+    background: var(--bg-main);
+    overflow: hidden;
 }
 
-/* The tactical grid for building placement */
-.kingdom-grid {
+/* Wraps the World Layer and the Journal */
+.kingdom-main {
     flex: 1;
-    padding: var(--space-xl);
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    grid-auto-rows: min-content;
-    gap: var(--space-lg);
-    overflow-y: auto;
-}
-
-/* Specific styling for the Building blocks */
-.building {
-    aspect-ratio: 1 / 1;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+/* The World Layer: Horizontal scrollable strip at the top */
+.world-layer {
+    flex: 0 0 260px; /* Fixed height for the building strip */
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    padding: 0 var(--space-xl);
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: relative;
+    background: radial-gradient(circle at top center, var(--surface-1), var(--bg-main) 100%);
+}
+
+/* A subtle ground line to anchor the buildings visually */
+.world-layer::after {
+    content: '';
+    position: absolute;
+    bottom: 25%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border-subtle);
+    z-index: 0;
+}
+
+/* Lightweight Map Node / Building indicator */
+.map-node {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    min-width: 90px;
+}
+
+.map-node:hover {
+    transform: translateY(-5px);
+}
+
+.node-icon-wrapper {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    border: 2px solid var(--border-strong);
+    display: flex;
     justify-content: center;
     align-items: center;
-    position: relative;
-    background: var(--surface-1);
-    border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    cursor: pointer;
+    color: var(--text-muted);
     transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
-.building:hover {
-    transform: translateY(-4px);
+.map-node.active .node-icon-wrapper,
+.map-node:hover .node-icon-wrapper {
     border-color: var(--accent-gold);
-    background: var(--surface-2);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-}
-
-.building--active {
-    border-color: var(--accent-gold);
-    background: var(--surface-2);
-    box-shadow: 0 0 0 2px var(--accent-gold);
-}
-
-.building-level {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 0.7rem;
     color: var(--accent-gold);
+}
+
+.map-node.active .node-icon-wrapper {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+}
+
+.node-label {
+    margin-top: 12px;
     font-family: var(--font-heading);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+    background: var(--bg-panel);
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+}
+
+.map-node.active .node-label {
+    color: var(--accent-gold);
+    border-color: var(--accent-gold);
+}
+
+.node-badge {
+    position: absolute;
+    top: -5px;
+    right: 5px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.75rem;
     font-weight: bold;
 }
 
-.building-name {
-    font-size: 0.8rem;
-    margin-top: var(--space-sm);
-    text-align: center;
-    font-family: var(--font-heading);
-    color: var(--text-secondary);
+/* Kingdom Journal (Event Log) */
+.journal-container {
+    flex: 1;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border-strong);
+    padding: var(--space-xl);
+    overflow-y: auto;
+    box-shadow: inset 0 10px 20px rgba(0,0,0,0.2);
 }
 
-/* Side Panel for Progressive Disclosure */
+.journal-header {
+    color: var(--accent-gold);
+    font-family: var(--font-heading);
+    margin-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: var(--space-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.journal-entry {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+    padding: 8px 12px;
+    background: var(--surface-1);
+    border-left: 2px solid var(--border-subtle);
+    border-radius: 0 4px 4px 0;
+    font-size: 0.9rem;
+}
+
+.journal-entry--good { border-left-color: var(--success); }
+.journal-entry--bad { border-left-color: var(--danger); }
+.journal-entry--neutral { border-left-color: var(--accent-blue); }
+
+.journal-time {
+    color: var(--text-muted);
+    font-family: monospace;
+    font-size: 0.85rem;
+    min-width: 70px;
+}
+
+.journal-text {
+    color: var(--text-primary);
+}
+
+/* Side Panel styling */
 .side-panel {
     width: 350px;
     background: var(--bg-panel);
@@ -75,6 +173,8 @@
     gap: var(--space-lg);
     box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
     animation: slideIn 0.3s ease-out;
+    overflow-y: auto;
+    z-index: 10;
 }
 
 @keyframes slideIn {
@@ -82,14 +182,40 @@
     to { transform: translateX(0); }
 }
 
-/* Mobile-first: Convert side panel to bottom sheet */
+.instance-item {
+    padding: var(--space-md);
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.15s;
+}
+
+.instance-item:hover {
+    border-color: var(--accent-gold);
+}
+
+.instance-item-title {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.instance-item-level {
+    font-size: 0.75rem;
+    color: var(--accent-gold);
+}
+
 @media (max-width: 768px) {
     .side-panel {
         position: fixed;
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 60vh;
+        height: 70vh;
         border-left: none;
         border-top: 1px solid var(--border-strong);
         border-radius: 20px 20px 0 0;

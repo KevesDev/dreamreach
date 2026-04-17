@@ -28,15 +28,15 @@ export default function Layout() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 'var(--space-lg)' }}>
-                    <div className="hud-stat"><Icon name="population" size={14} /> {profile.totalPopulation}/{profile.maxPopulation}</div>
-                    <div className="hud-stat"><Icon name="food" size={14} /> {profile.food}</div>
-                    <div className="hud-stat"><Icon name="wood" size={14} /> {profile.wood}</div>
-                    <div className="hud-stat"><Icon name="stone" size={14} /> {profile.stone}</div>
+                    <div className="hud-stat" title="Population"><Icon name="population" size={14} /> {profile.totalPopulation}/{profile.maxPopulation}</div>
+                    <div className="hud-stat" title="Food"><Icon name="food" size={14} /> {profile.food}</div>
+                    <div className="hud-stat" title="Wood"><Icon name="wood" size={14} /> {profile.wood}</div>
+                    <div className="hud-stat" title="Stone"><Icon name="stone" size={14} /> {profile.stone}</div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    <div style={{ color: 'var(--accent-gold)' }}><Icon name="gold" size={14} /> {profile.gold}</div>
-                    <button onClick={() => { localStorage.removeItem('dreamreach_token'); navigate('/login'); }} className="button--danger">
+                    <div style={{ color: 'var(--accent-gold)' }} title="Gold"><Icon name="gold" size={14} /> {profile.gold}</div>
+                    <button title="Logout" onClick={() => { localStorage.removeItem('dreamreach_token'); navigate('/login'); }} className="button--danger">
                         <Icon name="logout" size={14} />
                     </button>
                 </div>
