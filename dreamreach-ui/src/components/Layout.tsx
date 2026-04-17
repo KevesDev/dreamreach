@@ -113,39 +113,55 @@ export default function Layout() {
                     <span style={{ fontSize: '0.8rem', marginLeft: '10px' }}>{profile.displayName}</span>
                 </div>
 
-                <div style={{ display: 'flex', gap: 'var(--space-lg)' }}>
+
+                 <div style={{ display: 'flex', gap: 'var(--space-lg)' }}>
                     <div className="hud-stat" title="Population">
                         <Icon name="population" size={14} /> {profile.totalPopulation}/{profile.maxPopulation}
                     </div>
 
                     <div className="hud-stat" title="Food">
                         <Icon name="food" size={14} /> {profile.food}
-                        {profile.pendingFood !== 0 && <span style={{ color: 'var(--accent-gold)', marginLeft: '4px' }}>(+{profile.pendingFood})</span>}
+                        {profile.pendingFood !== 0 && (
+                            <span style={{ color: 'var(--accent-gold)', marginLeft: '4px' }}>
+                                ({profile.pendingFood > 0 ? `+${profile.pendingFood}` : profile.pendingFood})
+                            </span>
+                        )}
                         <span style={{ color: profile.foodRate < 0 ? 'var(--danger)' : 'var(--success)', fontSize: '0.7rem', marginLeft: '4px' }}>
-                            {profile.foodRate > 0 ? '+' : ''}{profile.foodRate}/hr
+                            {profile.foodRate > 0 ? `+${profile.foodRate}` : profile.foodRate}/hr
                         </span>
                     </div>
+
                     <div className="hud-stat" title="Wood">
                         <Icon name="wood" size={14} /> {profile.wood}
-                        {profile.pendingWood > 0 && <span style={{ color: 'var(--accent-gold)', marginLeft: '4px' }}>(+{profile.pendingWood})</span>}
+                        {profile.pendingWood !== 0 && (
+                            <span style={{ color: 'var(--accent-gold)', marginLeft: '4px' }}>
+                                ({profile.pendingWood > 0 ? `+${profile.pendingWood}` : profile.pendingWood})
+                            </span>
+                        )}
                         <span style={{ color: profile.woodRate < 0 ? 'var(--danger)' : 'var(--success)', fontSize: '0.7rem', marginLeft: '4px' }}>
-                            {profile.woodRate > 0 ? '+' : ''}{profile.woodRate}/hr
+                            {profile.woodRate > 0 ? `+${profile.woodRate}` : profile.woodRate}/hr
                         </span>
                     </div>
+
                     <div className="hud-stat" title="Stone">
                         <Icon name="stone" size={14} /> {profile.stone}
-                        {profile.pendingStone > 0 && <span style={{ color: 'var(--accent-gold)', marginLeft: '4px' }}>(+{profile.pendingStone})</span>}
+                        {profile.pendingStone !== 0 && (
+                            <span style={{ color: 'var(--accent-gold)', marginLeft: '4px' }}>
+                                ({profile.pendingStone > 0 ? `+${profile.pendingStone}` : profile.pendingStone})
+                            </span>
+                        )}
                         <span style={{ color: profile.stoneRate < 0 ? 'var(--danger)' : 'var(--success)', fontSize: '0.7rem', marginLeft: '4px' }}>
-                            {profile.stoneRate > 0 ? '+' : ''}{profile.stoneRate}/hr
+                            {profile.stoneRate > 0 ? `+${profile.stoneRate}` : profile.stoneRate}/hr
                         </span>
                     </div>
                 </div>
+
 
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                     {/* The dynamic Collect Button */}
                     {hasPendingResources && (
                         <button onClick={handleClaim} className="button button--claim" style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
-                            Collect Cargo
+                            Collect
                         </button>
                     )}
 
