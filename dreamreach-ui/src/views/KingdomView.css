@@ -1,0 +1,98 @@
+/* src/views/KingdomView.css */
+
+.kingdom-container {
+    display: flex;
+    height: 100%;
+    /* Negative margin to offset the main content padding and go edge-to-edge */
+    margin: calc(var(--space-md) * -1);
+}
+
+/* The tactical grid for building placement */
+.kingdom-grid {
+    flex: 1;
+    padding: var(--space-xl);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-auto-rows: min-content;
+    gap: var(--space-lg);
+    overflow-y: auto;
+}
+
+/* Specific styling for the Building blocks */
+.building {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.building:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-gold);
+    background: var(--surface-2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.building--active {
+    border-color: var(--accent-gold);
+    background: var(--surface-2);
+    box-shadow: 0 0 0 2px var(--accent-gold);
+}
+
+.building-level {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 0.7rem;
+    color: var(--accent-gold);
+    font-family: var(--font-heading);
+    font-weight: bold;
+}
+
+.building-name {
+    font-size: 0.8rem;
+    margin-top: var(--space-sm);
+    text-align: center;
+    font-family: var(--font-heading);
+    color: var(--text-secondary);
+}
+
+/* Side Panel for Progressive Disclosure */
+.side-panel {
+    width: 350px;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border-strong);
+    padding: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+/* Mobile-first: Convert side panel to bottom sheet */
+@media (max-width: 768px) {
+    .side-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 60vh;
+        border-left: none;
+        border-top: 1px solid var(--border-strong);
+        border-radius: 20px 20px 0 0;
+        z-index: 200;
+    }
+}
