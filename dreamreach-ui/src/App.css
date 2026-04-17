@@ -1,8 +1,7 @@
-/* Google Fonts Import */
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap');
 
 :root {
-  /* 2. COLOR SYSTEM [cite: 133-157] */
+  /* Color Palette */
   --bg-main: #0f1115;
   --bg-panel: #1a1d24;
   --bg-elevated: #222633;
@@ -17,38 +16,34 @@
   --accent-blue: #4ea1ff;
   --accent-green: #5cc48d;
   --accent-red: #e05a5a;
-  --success: #5cc48d;
-  --warning: #f0b35a;
-  --danger: #e05a5a;
 
-  /* 12. SPACING SYSTEM [cite: 294-298] */
+  /* Spacing */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 16px;
   --space-lg: 24px;
   --space-xl: 32px;
 
-  /* TYPOGRAPHY SETUP [cite: 164-165] */
+  /* Typography */
   --font-heading: 'Cinzel', serif;
   --font-body: 'Inter', sans-serif;
 }
 
-/* 3. TYPOGRAPHY USAGE [cite: 174-180] */
+body {
+  margin: 0;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-heading);
   letter-spacing: 0.05em;
-  color: var(--text-primary);
   margin: 0;
 }
 
-body {
-  font-family: var(--font-body);
-  background-color: var(--bg-main);
-  color: var(--text-primary);
-  margin: 0;
-}
-
-/* 4. PANEL SYSTEM [cite: 184-194] */
+/* Panel System */
 .panel {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
@@ -61,7 +56,7 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-/* 5. BUTTON SYSTEM [cite: 197-221] */
+/* Button System */
 .button {
   background: var(--surface-2);
   border: 1px solid var(--border-subtle);
@@ -69,8 +64,8 @@ body {
   padding: 10px 16px;
   border-radius: 8px;
   cursor: pointer;
-  font-family: var(--font-body);
   transition: all 0.15s ease;
+  font-family: var(--font-body);
 }
 
 .button:hover {
@@ -82,7 +77,7 @@ body {
   background: var(--accent-gold);
   color: #000;
   border: none;
-  font-weight: bold;
+  font-weight: 600;
 }
 
 .button--danger {
@@ -91,7 +86,7 @@ body {
   border: none;
 }
 
-/* 7. HUD [cite: 236-248] */
+/* HUD & Layout Components */
 .hud {
   height: 50px;
   background: var(--bg-panel);
@@ -100,39 +95,48 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-md);
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
-/* 8. BUILDINGS [cite: 253-264] */
-.building {
-  background: var(--surface-1);
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  padding: 12px;
-  cursor: pointer;
-  transition: transform 0.1s ease;
+.hud-stat {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--space-sm);
+  font-size: 0.9rem;
 }
 
-.building:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent-gold);
+.sidebar {
+  width: 220px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-subtle);
+  padding: var(--space-md) 0;
 }
 
-/* 10. LISTS [cite: 278-285] */
 .list-item {
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--border-subtle);
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  padding: 12px var(--space-md);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: background 0.2s;
 }
 
 .list-item:hover {
   background: var(--surface-1);
+  color: var(--accent-gold);
+}
+
+.list-item.active {
+  color: var(--accent-gold);
+  border-right: 2px solid var(--accent-gold);
+}
+
+.chat-drawer {
+  width: 300px;
+  position: absolute;
+  right: 0;
+  top: 50px;
+  bottom: 0;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-strong);
+  z-index: 50;
+  transition: transform 0.3s ease;
 }
