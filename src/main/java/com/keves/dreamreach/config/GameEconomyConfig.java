@@ -13,6 +13,21 @@ import java.util.List;
 @Setter
 public class GameEconomyConfig {
 
+    // --- STARTING CONDITIONS ---
+    private int startingFood = 150;
+    private int startingWood = 100;
+    private int startingStone = 50;
+    private int startingGold = 0;
+    private int startingGems = 0;
+
+    private int startingHappiness = 50;
+    private int startingPeasants = 5;
+
+    private int startingHouses = 1;
+    private int startingTowers = 0;
+    private int startingBakeries = 0;
+    private int startingLodges = 0;
+
     // --- PASSIVE BASELINE ---
     private int basePassiveWood = 30;
     private int basePassiveStone = 30;

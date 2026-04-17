@@ -38,5 +38,12 @@ public class PlayerProfileResponse {
     private int totalPopulation;
     private int maxPopulation; // Derived from houses
 
+    // Structure Counts
+    private int keepLevel;
+    private int houses;
+    private int towers;
+    private int bakeries;
+    private int huntingLodges;
+
     private List<ConstructionTaskResponse> activeConstructions;
 }

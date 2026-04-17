@@ -34,9 +34,6 @@ public class PlayerController {
     private final ConstructionService constructionService;
     private final ConstructionTaskRepository constructionTaskRepository;
 
-    private static final int BASE_WOOD_RATE = 12;
-    private static final int BASE_STONE_RATE = 12;
-
     public PlayerController(PlayerAccountRepository accountRepository,
                             GameEconomyConfig economyConfig,
                             RewardService rewardService,
@@ -69,14 +66,14 @@ public class PlayerController {
                 : 0;
 
         int foodRate = economyService.calculateFoodRate(profile);
-        int woodRate = (pop != null ? pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter() : 0) + BASE_WOOD_RATE;
-        int stoneRate = (pop != null ? pop.getStoneworkers() * economyConfig.getStonePerStoneworker() : 0) + BASE_STONE_RATE;
+        int woodRate = (pop != null ? pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter() : 0) + economyConfig.getBasePassiveWood();
+        int stoneRate = (pop != null ? pop.getStoneworkers() * economyConfig.getStonePerStoneworker() : 0) + economyConfig.getBasePassiveStone();
 
         // SAFELY MAP TASKS: Uses the new findByProfileId repository method
         List<ConstructionTaskResponse> activeTasks = constructionTaskRepository.findByProfileId(profile.getId())
                 .stream()
                 .map(task -> ConstructionTaskResponse.builder()
-                        .buildingType(task.getBuildingType()) // Requires @Getter or @Data in ConstructionTask.java
+                        .buildingType(task.getBuildingType())
                         .targetLevel(task.getTargetLevel())
                         .startTimeEpoch(task.getStartTime().toEpochMilli())
                         .completionTimeEpoch(task.getCompletionTime().toEpochMilli())
