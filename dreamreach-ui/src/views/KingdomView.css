@@ -170,6 +170,7 @@
     background: var(--bg-panel);
     border-left: 1px solid var(--border-strong);
     padding: var(--space-xl);
+    padding-right: calc(var(--space-xl) + 12px); /* Adds extra room specifically for the scrollbar */
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
@@ -179,10 +180,11 @@
     z-index: 10;
 }
 
-/* Add a line-height rule to make the description text highly readable */
+/* Ensure description paragraphs break correctly and breathe */
 .side-panel p {
     line-height: 1.5;
     word-wrap: break-word;
+    margin: 0;
 }
 
 @keyframes slideIn {

@@ -49,23 +49,23 @@ export default function Layout() {
                 accumulatorRef.current.stone += stonePerSec;
                 accumulatorRef.current.food += foodPerSec;
 
-                // If accumulator > 1, 'mint' a whole resource and deduct from accumulator
+                // If accumulator >= 1 or <= -1, 'mint' or 'consume' a whole resource and deduct from accumulator
                 let newWood = prevProfile.wood;
                 let newStone = prevProfile.stone;
                 let newFood = prevProfile.food;
 
-                if (accumulatorRef.current.wood >= 1) {
-                    const minted = Math.floor(accumulatorRef.current.wood);
+                if (Math.abs(accumulatorRef.current.wood) >= 1) {
+                    const minted = Math.trunc(accumulatorRef.current.wood);
                     newWood += minted;
                     accumulatorRef.current.wood -= minted;
                 }
-                if (accumulatorRef.current.stone >= 1) {
-                    const minted = Math.floor(accumulatorRef.current.stone);
+                if (Math.abs(accumulatorRef.current.stone) >= 1) {
+                    const minted = Math.trunc(accumulatorRef.current.stone);
                     newStone += minted;
                     accumulatorRef.current.stone -= minted;
                 }
-                if (accumulatorRef.current.food >= 1) {
-                    const minted = Math.floor(accumulatorRef.current.food);
+                if (Math.abs(accumulatorRef.current.food) >= 1) {
+                    const minted = Math.trunc(accumulatorRef.current.food);
                     newFood += minted;
                     accumulatorRef.current.food -= minted;
                 }
@@ -111,15 +111,21 @@ export default function Layout() {
                     </div>
                     <div className="hud-stat" title="Food">
                         <Icon name="food" size={14} /> {profile.food}
-                        <span style={{ color: 'var(--success)', fontSize: '0.7rem', marginLeft: '4px' }}>+{profile.foodRate}/hr</span>
+                        <span style={{ color: profile.foodRate < 0 ? 'var(--danger)' : 'var(--success)', fontSize: '0.7rem', marginLeft: '4px' }}>
+                            {profile.foodRate > 0 ? '+' : ''}{profile.foodRate}/hr
+                        </span>
                     </div>
                     <div className="hud-stat" title="Wood">
                         <Icon name="wood" size={14} /> {profile.wood}
-                        <span style={{ color: 'var(--success)', fontSize: '0.7rem', marginLeft: '4px' }}>+{profile.woodRate}/hr</span>
+                        <span style={{ color: profile.woodRate < 0 ? 'var(--danger)' : 'var(--success)', fontSize: '0.7rem', marginLeft: '4px' }}>
+                            {profile.woodRate > 0 ? '+' : ''}{profile.woodRate}/hr
+                        </span>
                     </div>
                     <div className="hud-stat" title="Stone">
                         <Icon name="stone" size={14} /> {profile.stone}
-                        <span style={{ color: 'var(--success)', fontSize: '0.7rem', marginLeft: '4px' }}>+{profile.stoneRate}/hr</span>
+                        <span style={{ color: profile.stoneRate < 0 ? 'var(--danger)' : 'var(--success)', fontSize: '0.7rem', marginLeft: '4px' }}>
+                            {profile.stoneRate > 0 ? '+' : ''}{profile.stoneRate}/hr
+                        </span>
                     </div>
                 </div>
 
