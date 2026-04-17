@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/client';
 import { Icon } from './Icon';
@@ -8,10 +8,19 @@ export default function Layout() {
     const navigate = useNavigate();
     const location = useLocation();
 
+    // We use a ref to track the "decimal" portions of resources.
+    // If you earn 12 wood per hour, you earn 0.0033 wood per second.
+    // State only holds integers for rendering, so the ref accumulates the fractions.
+    const accumulatorRef = useRef({ wood: 0, stone: 0, food: 0 });
+
     // Wrapped in useCallback so we can trigger it after claiming resources
     const fetchProfile = useCallback(() => {
         api.get('/player/me')
-            .then(res => setProfile(res.data))
+            .then(res => {
+                setProfile(res.data);
+                // Reset accumulators when we get fresh truth from the server
+                accumulatorRef.current = { wood: 0, stone: 0, food: 0 };
+            })
             .catch(() => {
                 localStorage.removeItem('dreamreach_token');
                 navigate('/login');
@@ -21,6 +30,57 @@ export default function Layout() {
     useEffect(() => {
         fetchProfile();
     }, [fetchProfile]);
+
+    // THE TICKER: Runs every second to simulate the game economy client-side
+    useEffect(() => {
+        if (!profile) return;
+
+        const intervalId = setInterval(() => {
+            setProfile((prevProfile: any) => {
+                if (!prevProfile) return null;
+
+                // Calculate resource per second
+                const woodPerSec = (prevProfile.woodRate || 0) / 3600;
+                const stonePerSec = (prevProfile.stoneRate || 0) / 3600;
+                const foodPerSec = (prevProfile.foodRate || 0) / 3600;
+
+                // Add to accumulators
+                accumulatorRef.current.wood += woodPerSec;
+                accumulatorRef.current.stone += stonePerSec;
+                accumulatorRef.current.food += foodPerSec;
+
+                // If accumulator > 1, 'mint' a whole resource and deduct from accumulator
+                let newWood = prevProfile.wood;
+                let newStone = prevProfile.stone;
+                let newFood = prevProfile.food;
+
+                if (accumulatorRef.current.wood >= 1) {
+                    const minted = Math.floor(accumulatorRef.current.wood);
+                    newWood += minted;
+                    accumulatorRef.current.wood -= minted;
+                }
+                if (accumulatorRef.current.stone >= 1) {
+                    const minted = Math.floor(accumulatorRef.current.stone);
+                    newStone += minted;
+                    accumulatorRef.current.stone -= minted;
+                }
+                if (accumulatorRef.current.food >= 1) {
+                    const minted = Math.floor(accumulatorRef.current.food);
+                    newFood += minted;
+                    accumulatorRef.current.food -= minted;
+                }
+
+                return {
+                    ...prevProfile,
+                    wood: newWood,
+                    stone: newStone,
+                    food: newFood
+                };
+            });
+        }, 1000); // 1000ms = 1 tick per second
+
+        return () => clearInterval(intervalId); // Cleanup
+    }, [profile?.woodRate, profile?.stoneRate, profile?.foodRate]);
 
     const handleClaim = async () => {
         try {
@@ -67,7 +127,7 @@ export default function Layout() {
                     {/* The dynamic Collect Button */}
                     {hasPendingResources && (
                         <button onClick={handleClaim} className="button--primary" style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
-                            Collect Cargo
+                            Collect
                         </button>
                     )}
 
