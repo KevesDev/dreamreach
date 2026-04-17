@@ -132,8 +132,9 @@
     border-bottom: 1px solid var(--border-subtle);
     padding-bottom: var(--space-sm);
     display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
+    justify-content: flex-start; /* Moved from space-between to align items left */
+    align-items: baseline; /* Ensures the smaller text aligns to the bottom of the H2 */
+    gap: var(--space-md); /* Adds breathing room between the title and subtitle */
 }
 
 .journal-entry {
@@ -165,6 +166,7 @@
 /* Side Panel styling */
 .side-panel {
     width: 350px;
+    box-sizing: border-box; /* Prevents padding from pushing content off-screen */
     background: var(--bg-panel);
     border-left: 1px solid var(--border-strong);
     padding: var(--space-xl);
@@ -175,6 +177,12 @@
     animation: slideIn 0.3s ease-out;
     overflow-y: auto;
     z-index: 10;
+}
+
+/* Add a line-height rule to make the description text highly readable */
+.side-panel p {
+    line-height: 1.5;
+    word-wrap: break-word;
 }
 
 @keyframes slideIn {
@@ -202,6 +210,7 @@
     font-family: var(--font-heading);
     font-size: 0.9rem;
     color: var(--text-primary);
+    padding: 10px;
 }
 
 .instance-item-level {

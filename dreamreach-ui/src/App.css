@@ -87,3 +87,17 @@ h1, h2, h3 {
   cursor: pointer;
   font-weight: 600;
 }
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: var(--space-md);
+  box-sizing: border-box; /* Add this */
+}
+
+.panel--elevated {
+  background: var(--bg-elevated);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box; /* Add this */
+}
