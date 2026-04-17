@@ -54,6 +54,10 @@ public class PlayerController {
 
 
         PlayerProfile profile = account.getProfile();
+
+        // Force the backend to calculate the elapsed time BEFORE sending the data to the client.
+        economyService.updateProductionState(profile);
+
         PlayerPopulation pop = profile.getPopulation();
 
         // Calculate dynamic limits of peasant population using the centralized ruleset
