@@ -55,20 +55,31 @@ public class EconomyService {
         if (res == null || pop == null) return;
 
         Instant now = Instant.now();
-        // Calculate the exact fraction of an hour that has passed since the last state change
         double hoursElapsed = Duration.between(res.getLastUpdate(), now).toMillis() / 3600000.0;
 
-        // 1. Calculate the rates based on the state AT THIS MOMENT (Including Passive Baseline)
         int foodRate = calculateFoodRate(profile);
         int woodRate = (pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter()) + economyConfig.getBasePassiveWood();
         int stoneRate = (pop.getStoneworkers() * economyConfig.getStonePerStoneworker()) + economyConfig.getBasePassiveStone();
 
-        // 2. Add the earnings from the elapsed time into the 'Pending' pool
-        res.setPendingFood(res.getPendingFood() + (int)(foodRate * hoursElapsed));
-        res.setPendingWood(res.getPendingWood() + (int)(woodRate * hoursElapsed));
-        res.setPendingStone(res.getPendingStone() + (int)(stoneRate * hoursElapsed));
+        int newPendingFood = res.getPendingFood() + (int)(foodRate * hoursElapsed);
+        int newPendingWood = res.getPendingWood() + (int)(woodRate * hoursElapsed);
+        int newPendingStone = res.getPendingStone() + (int)(stoneRate * hoursElapsed);
 
-        // 3. Update the timestamp so the next calculation starts from 'Now'
+        // Clamp pending consumption to prevent total treasury from dropping below zero
+        if (res.getFood() + newPendingFood < 0) {
+            newPendingFood = -res.getFood();
+        }
+        if (res.getWood() + newPendingWood < 0) {
+            newPendingWood = -res.getWood();
+        }
+        if (res.getStone() + newPendingStone < 0) {
+            newPendingStone = -res.getStone();
+        }
+
+        res.setPendingFood(newPendingFood);
+        res.setPendingWood(newPendingWood);
+        res.setPendingStone(newPendingStone);
+
         res.setLastUpdate(now);
 
         profileRepository.save(profile);
@@ -80,18 +91,15 @@ public class EconomyService {
      */
     @Transactional
     public void claimResources(PlayerProfile profile) {
-        // First, ensure the pending pool is up-to-date with the current second
         updateProductionState(profile);
 
         PlayerResources res = profile.getResources();
 
-        // Move Pending -> Treasury
-        res.setFood(res.getFood() + res.getPendingFood());
-        res.setWood(res.getWood() + res.getPendingWood());
-        res.setStone(res.getStone() + res.getPendingStone());
-        res.setGold(res.getGold() + res.getPendingGold());
+        res.setFood(Math.max(0, res.getFood() + res.getPendingFood()));
+        res.setWood(Math.max(0, res.getWood() + res.getPendingWood()));
+        res.setStone(Math.max(0, res.getStone() + res.getPendingStone()));
+        res.setGold(Math.max(0, res.getGold() + res.getPendingGold()));
 
-        // Reset the pending pool back to zero
         res.setPendingFood(0);
         res.setPendingWood(0);
         res.setPendingStone(0);
