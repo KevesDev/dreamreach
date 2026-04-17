@@ -25,6 +25,10 @@ public class PlayerController {
     private final RewardService rewardService;
     private final EconomyService economyService;
 
+    // Must match the EconomyService baseline
+    private static final int BASE_WOOD_RATE = 12;
+    private static final int BASE_STONE_RATE = 12;
+
     public PlayerController(PlayerAccountRepository accountRepository,
                             GameEconomyConfig economyConfig,
                             RewardService rewardService,
@@ -57,11 +61,10 @@ public class PlayerController {
                 ? (profile.getStructures().getHouses() * economyConfig.getCapacityPerHouse())
                 : 0;
 
-        // We calculate the 'rates' here so the Frontend knows
-        // exactly how fast to 'tick' the numbers up visually.
+        // Calculate rates including the passive baseline so the UI displays correctly
         int foodRate = economyService.calculateFoodRate(profile);
-        int woodRate = (pop != null) ? pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter() : 0;
-        int stoneRate = (pop != null) ? pop.getStoneworkers() * economyConfig.getStonePerStoneworker() : 0;
+        int woodRate = (pop != null ? pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter() : 0) + BASE_WOOD_RATE;
+        int stoneRate = (pop != null ? pop.getStoneworkers() * economyConfig.getStonePerStoneworker() : 0) + BASE_STONE_RATE;
 
         // safely map main account info
         PlayerProfileResponse response = PlayerProfileResponse.builder()

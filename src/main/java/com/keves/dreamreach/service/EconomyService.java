@@ -22,6 +22,10 @@ public class EconomyService {
     private final GameEconomyConfig economyConfig;
     private final PlayerProfileRepository profileRepository;
 
+    // PASSIVE BASELINE: Prevents soft-locking (12 per hour = 1 every 5 mins)
+    private static final int BASE_WOOD_RATE = 12;
+    private static final int BASE_STONE_RATE = 12;
+
     public EconomyService(GameEconomyConfig economyConfig, PlayerProfileRepository profileRepository) {
         this.economyConfig = economyConfig;
         this.profileRepository = profileRepository;
@@ -46,10 +50,6 @@ public class EconomyService {
     /**
      * STATE-BASED ACCRUAL LOGIC:
      * This method 'flushes' all resources earned at the OLD rate into the 'Pending' pool.
-     * *
-     * * Why is this important?
-     * If a user has 1 Woodcutter for 30 mins, then adds 5 more Woodcutters,
-     * we must calculate the first 30 mins at the rate of '1' BEFORE changing the rate to '6'.
      */
     @Transactional
     public void updateProductionState(PlayerProfile profile) {
@@ -62,10 +62,10 @@ public class EconomyService {
         // Calculate the exact fraction of an hour that has passed since the last state change
         double hoursElapsed = Duration.between(res.getLastUpdate(), now).toMillis() / 3600000.0;
 
-        // 1. Calculate the rates based on the state AT THIS MOMENT
+        // 1. Calculate the rates based on the state AT THIS MOMENT (Including Passive Baseline)
         int foodRate = calculateFoodRate(profile);
-        int woodRate = pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter();
-        int stoneRate = pop.getStoneworkers() * economyConfig.getStonePerStoneworker();
+        int woodRate = (pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter()) + BASE_WOOD_RATE;
+        int stoneRate = (pop.getStoneworkers() * economyConfig.getStonePerStoneworker()) + BASE_STONE_RATE;
 
         // 2. Add the earnings from the elapsed time into the 'Pending' pool
         res.setPendingFood(res.getPendingFood() + (int)(foodRate * hoursElapsed));
