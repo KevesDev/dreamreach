@@ -22,9 +22,9 @@ public class EconomyService {
     private final GameEconomyConfig economyConfig;
     private final PlayerProfileRepository profileRepository;
 
-    // PASSIVE BASELINE: Prevents soft-locking (12 per hour = 1 every 5 mins)
-    private static final int BASE_WOOD_RATE = 12;
-    private static final int BASE_STONE_RATE = 12;
+    // PASSIVE BASELINE: Prevents soft-locking (x per hour)
+    private static final int BASE_WOOD_RATE = 30;
+    private static final int BASE_STONE_RATE = 28;
 
     public EconomyService(GameEconomyConfig economyConfig, PlayerProfileRepository profileRepository) {
         this.economyConfig = economyConfig;

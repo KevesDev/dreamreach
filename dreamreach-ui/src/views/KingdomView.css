@@ -166,11 +166,11 @@
 /* Side Panel styling */
 .side-panel {
     width: 350px;
-    box-sizing: border-box; /* Prevents padding from pushing content off-screen */
+    box-sizing: border-box; /* FIX: Prevents width expansion */
     background: var(--bg-panel);
     border-left: 1px solid var(--border-strong);
     padding: var(--space-xl);
-    padding-right: calc(var(--space-xl) + 12px); /* Adds extra room specifically for the scrollbar */
+    padding-right: calc(var(--space-xl) + 16px); /* FIX: Leaves room for the scrollbar */
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
@@ -180,10 +180,18 @@
     z-index: 10;
 }
 
-/* Ensure description paragraphs break correctly and breathe */
-.side-panel p {
-    line-height: 1.5;
+/* Force all text inside the panel to respect the boundaries */
+.side-panel * {
+    box-sizing: border-box;
+}
+
+.side-panel p,
+.side-panel h3,
+.side-panel h4 {
+    white-space: normal;
     word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
     margin: 0;
 }
 
