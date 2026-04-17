@@ -4,8 +4,10 @@ import com.keves.dreamreach.config.GameEconomyConfig;
 import com.keves.dreamreach.dto.PlayerProfileResponse;
 import com.keves.dreamreach.entity.PlayerAccount;
 import com.keves.dreamreach.entity.PlayerProfile;
+import com.keves.dreamreach.entity.PlayerPopulation;
 import com.keves.dreamreach.exception.ResourceNotFoundException;
 import com.keves.dreamreach.repository.PlayerAccountRepository;
+import com.keves.dreamreach.service.EconomyService;
 import com.keves.dreamreach.service.RewardService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.http.ResponseEntity;
@@ -21,18 +23,22 @@ public class PlayerController {
     private final PlayerAccountRepository accountRepository;
     private final GameEconomyConfig economyConfig;
     private final RewardService rewardService;
+    private final EconomyService economyService;
 
     public PlayerController(PlayerAccountRepository accountRepository,
                             GameEconomyConfig economyConfig,
-                            RewardService rewardService) {
+                            RewardService rewardService,
+                            EconomyService economyService) {
         this.accountRepository = accountRepository;
         this.economyConfig = economyConfig;
         this.rewardService = rewardService;
+        this.economyService = economyService;
     }
 
     /**
      * Uses the JWT token to identify the user and return their profile.
      * Spring Security automatically injects the Authentication object if the token is valid.
+     * Includes real-time production rates (+/hr) and pending resources.
      */
     @GetMapping("/me")
     public ResponseEntity<PlayerProfileResponse> getMyProfile(Authentication authentication) {
@@ -44,11 +50,18 @@ public class PlayerController {
 
 
         PlayerProfile profile = account.getProfile();
+        PlayerPopulation pop = profile.getPopulation();
 
         // Calculate dynamic limits of peasant population using the centralized ruleset
         int calculatedMaxPop = (profile.getStructures() != null)
                 ? (profile.getStructures().getHouses() * economyConfig.getCapacityPerHouse())
                 : 0;
+
+        // We calculate the 'rates' here so the Frontend knows
+        // exactly how fast to 'tick' the numbers up visually.
+        int foodRate = economyService.calculateFoodRate(profile);
+        int woodRate = (pop != null) ? pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter() : 0;
+        int stoneRate = (pop != null) ? pop.getStoneworkers() * economyConfig.getStonePerStoneworker() : 0;
 
         // safely map main account info
         PlayerProfileResponse response = PlayerProfileResponse.builder()
@@ -56,12 +69,22 @@ public class PlayerController {
                 .displayName(account.getProfile().getDisplayName())
                 .pvpEnabled(account.getProfile().isEffectivelyPvpEnabled())
 
-        // Safely map resources
+                // Current Treasury Balances
                 .food(profile.getResources() != null ? profile.getResources().getFood() : 0)
                 .wood(profile.getResources() != null ? profile.getResources().getWood() : 0)
                 .stone(profile.getResources() != null ? profile.getResources().getStone() : 0)
                 .gold(profile.getResources() != null ? profile.getResources().getGold() : 0)
                 .gems(profile.getResources() != null ? profile.getResources().getGems() : 0)
+
+                // Production Rates (Needed for the HUD +/hr display)
+                .foodRate(foodRate)
+                .woodRate(woodRate)
+                .stoneRate(stoneRate)
+
+                // Pending Pool (Needed for the 'Claim' Ledger)
+                .pendingFood(profile.getResources() != null ? profile.getResources().getPendingFood() : 0)
+                .pendingWood(profile.getResources() != null ? profile.getResources().getPendingWood() : 0)
+                .pendingStone(profile.getResources() != null ? profile.getResources().getPendingStone() : 0)
 
                 // Safely map population metrics
                 .totalPopulation(profile.getPopulation() != null ? profile.getPopulation().getTotalPopulation() : 0)
@@ -71,6 +94,22 @@ public class PlayerController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Endpoint to 'Flush' pending resources into the main treasury.
+     * This is called when the player clicks 'Collect All' in the UI.
+     */
+    @PostMapping("/claim")
+    public ResponseEntity<?> claimResources(Authentication authentication) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+
+        // This moves pending -> actual and resets the lastUpdate timestamp
+        economyService.claimResources(account.getProfile());
+
+        return ResponseEntity.ok().build();
+    }
+
+    // daily reward claim
     @PostMapping("/reward/claim")
     public ResponseEntity<?> claimDailyReward(Authentication authentication) {
         PlayerAccount account = accountRepository.findByEmail(authentication.getName())
