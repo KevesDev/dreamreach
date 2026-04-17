@@ -37,16 +37,19 @@ export default function DashboardView() {
         <div>
             {showModal && <LoginCalendarModal streak={streak} track={rewardTrack} onClose={handleCloseModal} />}
 
-            <h2 style={{ marginTop: 0 }}>Overview</h2>
+            <h2 style={{ marginBottom: 'var(--space-md)' }}>Overview</h2>
 
-            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0', maxWidth: '600px' }}>
-                <h3 style={{ marginTop: 0, color: '#334155' }}>Account Status</h3>
-                <p style={{ margin: '10px 0' }}><strong>Email:</strong> {profile.email}</p>
-                <p style={{ margin: '10px 0' }}><strong>PvP Status:</strong> {profile.pvpEnabled ? '🔴 Enabled' : '🟢 Protected'}</p>
+            <div className="panel" style={{ maxWidth: '600px' }}>
+                <h3 style={{ marginTop: 0, color: 'var(--accent-gold)' }}>Commander Status</h3>
+                <div style={{ marginTop: 'var(--space-md)' }}>
+                    <p><strong>Identity:</strong> {profile.displayName}</p>
+                    <p><strong>Email:</strong> {profile.email}</p>
+                    <p><strong>Security:</strong> {profile.pvpEnabled ? '🔴 PvP Active' : '🟢 Protected'}</p>
+                </div>
             </div>
 
-            <p style={{ marginTop: '20px', color: '#64748b' }}>
-                Welcome, commander. Select a destination from the menu.
+            <p style={{ marginTop: 'var(--space-lg)', color: 'var(--text-muted)' }}>
+                Your kingdom awaits orders. Select a destination from the navigational menu.
             </p>
         </div>
     );
