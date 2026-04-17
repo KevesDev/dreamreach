@@ -24,7 +24,7 @@ export default function Layout() {
             <header className="hud">
                 <div className="hud-stat">
                     <h3 style={{ color: 'var(--accent-gold)', fontSize: '0.9rem', margin: 0 }}>DREAMREACH</h3>
-                    <span style={{ fontSize: '0.8rem' }}>{profile.displayName}</span>
+                    <span style={{ fontSize: '0.8rem', marginLeft: '10px' }}>{profile.displayName}</span>
                 </div>
 
                 <div style={{ display: 'flex', gap: 'var(--space-lg)' }}>
@@ -45,10 +45,16 @@ export default function Layout() {
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 <nav className="sidebar">
                     <Link to="/dashboard" className={`list-item ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-                        <Icon name="home" size={18} style={{ marginRight: '12px' }} /> Dashboard
+                        <Icon name="home" size={18} style={{ marginRight: '12px' }} /> Overview
                     </Link>
                     <Link to="/kingdom" className={`list-item ${location.pathname === '/kingdom' ? 'active' : ''}`}>
                         <Icon name="kingdom" size={18} style={{ marginRight: '12px' }} /> Kingdom
+                    </Link>
+                    <Link to="/roster" className={`list-item ${location.pathname === '/roster' ? 'active' : ''}`}>
+                        <Icon name="combat" size={18} style={{ marginRight: '12px' }} /> War Room
+                    </Link>
+                    <Link to="/summon" className={`list-item ${location.pathname === '/summon' ? 'active' : ''}`}>
+                        <Icon name="summon" size={18} style={{ marginRight: '12px' }} /> Summon
                     </Link>
                 </nav>
 
