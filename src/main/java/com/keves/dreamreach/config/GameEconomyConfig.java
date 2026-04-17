@@ -7,23 +7,22 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/**
- * The Centralized Economy Engine Ruleset.
- * These defaults can be safely overwritten in application.properties
- * without requiring code recompilation.
- */
 @Component
 @ConfigurationProperties(prefix = "game.economy")
 @Getter
 @Setter
 public class GameEconomyConfig {
 
+    // --- PASSIVE BASELINE ---
+    private int basePassiveWood = 30;
+    private int basePassiveStone = 30;
+
     // --- POPULATION RULES ---
     private int basePeasantCap = 10;
     private int capacityPerHouse = 5;
     private int maxHappiness = 100;
-    private int peasantJoinThreshold = 75; // Happiness needed for peasants to naturally join
-    private int peasantLeaveThreshold = 25; // Happiness level where peasants abandon the settlement
+    private int peasantJoinThreshold = 75;
+    private int peasantLeaveThreshold = 25;
 
     // --- CONSUMPTION RATES (Per Hour) ---
     private int foodConsumedPerPeasant = 2;
@@ -32,14 +31,31 @@ public class GameEconomyConfig {
     private int foodPerHunter = 5;
     private int woodPerWoodcutter = 3;
     private int stonePerStoneworker = 2;
-    private int foodPerBakery = 15; // Advanced structure production
+    private int foodPerBakery = 15;
+
+    // --- CONSTRUCTION BASE COSTS (Wood, Stone) ---
+    // TODO: these might scale by level (e.g., cost * level^1.5)
+    private int costHouseWood = 50;
+    private int costHouseStone = 10;
+    private int costBakeryWood = 100;
+    private int costBakeryStone = 50;
+    private int costLodgeWood = 120;
+    private int costLodgeStone = 30;
+
+    private int costTowerWood = 100;
+    private int costTowerStone = 100;
+
+    // --- CONSTRUCTION BASE TIMERS (in seconds) ---
+    private int buildTimeHouse = 60;     // 1 min
+    private int buildTimeBakery = 300;   // 5 mins
+    private int buildTimeTower = 300;
+    private int buildTimeLodge = 300;    // 5 mins
 
     // --- COMBAT / DEFENSE ---
     private int baseDefense = 10;
     private int defensePerTower = 25;
 
     // --- DAILY LOGIN REWARD CURVES ---
-    // Maps to Days 1 through 6. Day 7 is handled independently as the Summoning drop.
     private List<Integer> dailyResourceCurve = List.of(10, 20, 35, 55, 80, 110);
     private List<Integer> dailyGoldCurve = List.of(0, 0, 10, 25, 50, 100);
 }

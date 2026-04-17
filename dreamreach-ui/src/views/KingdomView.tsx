@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import api from '../api/client';
 import { Icon } from '../components/Icon';
 import './KingdomView.css';
+
+export interface ConstructionTaskResponse {
+    buildingType: string;
+    targetLevel: number;
+    startTimeEpoch: number;
+    completionTimeEpoch: number;
+}
 
 interface PlayerProfile {
     displayName: string;
@@ -11,6 +19,7 @@ interface PlayerProfile {
     stoneworkers: number;
     hunters: number;
     bakers: number;
+    activeConstructions?: ConstructionTaskResponse[];
 }
 
 interface BuildingInstance {
@@ -38,12 +47,21 @@ interface KingdomEvent {
 }
 
 export default function KingdomView() {
-    const { profile } = useOutletContext<{ profile: PlayerProfile }>();
+    const { profile, fetchProfile } = useOutletContext<{ profile: PlayerProfile, fetchProfile: () => void }>();
 
     const [selectedGroup, setSelectedGroup] = useState<BuildingGroup | null>(null);
     const [selectedInstance, setSelectedInstance] = useState<BuildingInstance | null>(null);
+    const [isBusy, setIsBusy] = useState(false);
 
-    // Mock physical presence
+    // Internal timer to drive the progress bars locally without querying the server
+    const [now, setNow] = useState(Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Mock physical presence (This will eventually come from the server in the next step)
     const buildingGroups: BuildingGroup[] = [
         {
             type: 'keep',
@@ -61,8 +79,7 @@ export default function KingdomView() {
             description: 'Provides housing for your peasant population. More houses mean a higher population cap.',
             instances: [
                 { id: 'house-1', level: 2, workersAssigned: 0, maxWorkers: 0, productionRate: 0 },
-                { id: 'house-2', level: 1, workersAssigned: 0, maxWorkers: 0, productionRate: 0 },
-                { id: 'house-3', level: 1, workersAssigned: 0, maxWorkers: 0, productionRate: 0 }
+                { id: 'house-2', level: 1, workersAssigned: 0, maxWorkers: 0, productionRate: 0 }
             ]
         },
         {
@@ -72,8 +89,7 @@ export default function KingdomView() {
             icon: 'food',
             description: 'Specialized structures where assigned peasants bake bread to slowly generate food.',
             instances: [
-                { id: 'bakery-1', level: 1, workersAssigned: 2, maxWorkers: 2, productionRate: 10 },
-                { id: 'bakery-2', level: 1, workersAssigned: 1, maxWorkers: 2, productionRate: 5 }
+                { id: 'bakery-1', level: 1, workersAssigned: 2, maxWorkers: 2, productionRate: 10 }
             ]
         },
         {
@@ -86,14 +102,35 @@ export default function KingdomView() {
         }
     ];
 
-    // Mock Event Log Data
     const events: KingdomEvent[] = [
-        { id: 'e1', timestamp: '14:32', message: 'Bakery #2 construction finished!', type: 'good' },
-        { id: 'e2', timestamp: '11:15', message: 'A peasant arrived seeking shelter. Population +1.', type: 'good' },
-        { id: 'e3', timestamp: '09:00', message: 'Your hunters secured a large elk. +50 Food.', type: 'good' },
-        { id: 'e4', timestamp: '08:45', message: 'A worker deserted due to starvation.', type: 'bad' },
         { id: 'e5', timestamp: '06:00', message: 'A new day dawns over the kingdom.', type: 'neutral' },
     ];
+
+    const handleConstruct = async (type: string) => {
+        if (isBusy) return;
+        setIsBusy(true);
+        try {
+            await api.post(`/player/construct?buildingType=${type}`);
+            fetchProfile(); // Sync new resources and start progress bar
+        } catch (err: any) {
+            alert(err.response?.data || "Failed to start construction");
+        } finally {
+            setIsBusy(false);
+        }
+    };
+
+    const handleComplete = async (type: string) => {
+        if (isBusy) return;
+        setIsBusy(true);
+        try {
+            await api.post(`/player/construct/complete?buildingType=${type}`);
+            fetchProfile(); // Clear queue and update physical buildings
+        } catch (err: any) {
+            alert(err.response?.data || "Failed to complete construction");
+        } finally {
+            setIsBusy(false);
+        }
+    };
 
     const getGlobalWorkerCount = (type: string) => {
         switch(type) {
@@ -113,32 +150,52 @@ export default function KingdomView() {
         setSelectedInstance(null);
     };
 
+    // Math helpers for the UI Progress bars
+    const calculateProgress = (start: number, end: number, current: number) => {
+        if (current >= end) return 100;
+        if (current <= start) return 0;
+        return Math.min(100, Math.max(0, ((current - start) / (end - start)) * 100));
+    };
+
+    const formatTimeRemaining = (end: number, current: number) => {
+        if (current >= end) return "Ready!";
+        const diffSeconds = Math.ceil((end - current) / 1000);
+        const m = Math.floor(diffSeconds / 60);
+        const s = diffSeconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const activeTask = selectedGroup
+        ? profile?.activeConstructions?.find(t => t.buildingType === selectedGroup.type)
+        : null;
+
     return (
         <div className="kingdom-container">
-
-            {/* MAIN AREA: World Layer + Journal */}
             <div className="kingdom-main">
-
-                {/* TOP: THE WORLD LAYER */}
                 <div className="world-layer">
-                    {buildingGroups.map((group) => (
-                        <div
-                            key={group.type}
-                            className={`map-node ${selectedGroup?.type === group.type ? 'active' : ''}`}
-                            onClick={() => handleGroupClick(group)}
-                        >
-                            {group.instances.length > 1 && (
-                                <div className="node-badge">{group.instances.length}</div>
-                            )}
-                            <div className="node-icon-wrapper">
-                                <Icon name={group.icon} size={32} />
+                    {buildingGroups.map((group) => {
+                        // Check if this specific building type is glowing with a finished construction
+                        const task = profile?.activeConstructions?.find(t => t.buildingType === group.type);
+                        const isReady = task && now >= task.completionTimeEpoch;
+
+                        return (
+                            <div
+                                key={group.type}
+                                className={`map-node ${selectedGroup?.type === group.type ? 'active' : ''} ${isReady ? 'ready' : ''}`}
+                                onClick={() => handleGroupClick(group)}
+                            >
+                                {group.instances.length > 0 && (
+                                    <div className="node-badge">{group.instances.length}</div>
+                                )}
+                                <div className="node-icon-wrapper">
+                                    <Icon name={group.icon} size={32} />
+                                </div>
+                                <div className="node-label">{group.name}</div>
                             </div>
-                            <div className="node-label">{group.name}</div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
-                {/* BOTTOM: THE KINGDOM JOURNAL */}
                 <div className="journal-container">
                     <div className="journal-header">
                         <h2>Royal Ledger</h2>
@@ -154,13 +211,10 @@ export default function KingdomView() {
                         ))}
                     </div>
                 </div>
-
             </div>
 
-            {/* RIGHT: THE INTERACTION PANEL */}
             {selectedGroup && (
                 <aside className="side-panel">
-
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
                             <h3 style={{ color: 'var(--accent-gold)' }}>
@@ -213,9 +267,45 @@ export default function KingdomView() {
                                         <span className="instance-item-level">Lvl {instance.level}</span>
                                     </div>
                                 ))}
-                                <button className="button" style={{ marginTop: 'var(--space-sm)' }}>
-                                    + Construct New
-                                </button>
+
+                                {/* THE TRANSACTIONAL CONSTRUCTION ENGINE UI */}
+                                {activeTask ? (
+                                    <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-sm)', padding: '12px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                                            <span style={{ color: 'var(--accent-gold)' }}>Constructing Lvl {activeTask.targetLevel}...</span>
+                                            <span style={{ fontFamily: 'monospace' }}>
+                                                {formatTimeRemaining(activeTask.completionTimeEpoch, now)}
+                                            </span>
+                                        </div>
+
+                                        <div className="progress-bar-container">
+                                            <div
+                                                className={`progress-bar-fill ${now >= activeTask.completionTimeEpoch ? 'ready' : ''}`}
+                                                style={{ width: `${calculateProgress(activeTask.startTimeEpoch, activeTask.completionTimeEpoch, now)}%` }}
+                                            ></div>
+                                        </div>
+
+                                        {now >= activeTask.completionTimeEpoch && (
+                                            <button
+                                                className="button button--claim"
+                                                style={{ width: '100%', marginTop: 'var(--space-md)' }}
+                                                onClick={() => handleComplete(selectedGroup.type)}
+                                                disabled={isBusy}
+                                            >
+                                                Complete Construction
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <button
+                                        className="button"
+                                        style={{ marginTop: 'var(--space-sm)' }}
+                                        onClick={() => handleConstruct(selectedGroup.type)}
+                                        disabled={isBusy}
+                                    >
+                                        + Construct New
+                                    </button>
+                                )}
                             </div>
                         </>
                     )}
@@ -249,7 +339,9 @@ export default function KingdomView() {
                             </div>
 
                             <div style={{ marginTop: 'auto' }}>
-                                <button className="button--primary" style={{ width: '100%' }}>UPGRADE TO LV.{selectedInstance.level + 1}</button>
+                                <button className="button--primary" style={{ width: '100%' }} disabled>
+                                    UPGRADE TO LV.{selectedInstance.level + 1}
+                                </button>
                                 <p style={{ fontSize: '0.7rem', textAlign: 'center', marginTop: 'var(--space-sm)', color: 'var(--text-muted)' }}>
                                     Requires Keep Lvl {selectedInstance.level + 1}
                                 </p>

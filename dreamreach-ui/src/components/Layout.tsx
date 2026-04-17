@@ -113,8 +113,7 @@ export default function Layout() {
                     <span style={{ fontSize: '0.8rem', marginLeft: '10px' }}>{profile.displayName}</span>
                 </div>
 
-
-                 <div style={{ display: 'flex', gap: 'var(--space-lg)' }}>
+                <div style={{ display: 'flex', gap: 'var(--space-lg)' }}>
                     <div className="hud-stat" title="Population">
                         <Icon name="population" size={14} /> {profile.totalPopulation}/{profile.maxPopulation}
                     </div>
@@ -156,9 +155,7 @@ export default function Layout() {
                     </div>
                 </div>
 
-
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    {/* The dynamic Collect Button */}
                     {hasPendingResources && (
                         <button onClick={handleClaim} className="button button--claim" style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
                             Collect
@@ -190,7 +187,8 @@ export default function Layout() {
                 </nav>
 
                 <main style={{ flex: 1, padding: 'var(--space-md)', overflowY: 'auto' }}>
-                    <Outlet context={{ profile }} />
+                    {/* Exposing fetchProfile to children so they can sync */}
+                    <Outlet context={{ profile, fetchProfile }} />
                 </main>
             </div>
         </div>

@@ -22,10 +22,6 @@ public class EconomyService {
     private final GameEconomyConfig economyConfig;
     private final PlayerProfileRepository profileRepository;
 
-    // PASSIVE BASELINE: Prevents soft-locking (x per hour)
-    private static final int BASE_WOOD_RATE = 30;
-    private static final int BASE_STONE_RATE = 28;
-
     public EconomyService(GameEconomyConfig economyConfig, PlayerProfileRepository profileRepository) {
         this.economyConfig = economyConfig;
         this.profileRepository = profileRepository;
@@ -64,8 +60,8 @@ public class EconomyService {
 
         // 1. Calculate the rates based on the state AT THIS MOMENT (Including Passive Baseline)
         int foodRate = calculateFoodRate(profile);
-        int woodRate = (pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter()) + BASE_WOOD_RATE;
-        int stoneRate = (pop.getStoneworkers() * economyConfig.getStonePerStoneworker()) + BASE_STONE_RATE;
+        int woodRate = (pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter()) + economyConfig.getBasePassiveWood();
+        int stoneRate = (pop.getStoneworkers() * economyConfig.getStonePerStoneworker()) + economyConfig.getBasePassiveStone();
 
         // 2. Add the earnings from the elapsed time into the 'Pending' pool
         res.setPendingFood(res.getPendingFood() + (int)(foodRate * hoursElapsed));
@@ -93,11 +89,13 @@ public class EconomyService {
         res.setFood(res.getFood() + res.getPendingFood());
         res.setWood(res.getWood() + res.getPendingWood());
         res.setStone(res.getStone() + res.getPendingStone());
+        res.setGold(res.getGold() + res.getPendingGold());
 
         // Reset the pending pool back to zero
         res.setPendingFood(0);
         res.setPendingWood(0);
         res.setPendingStone(0);
+        res.setPendingGold(0);
 
         profileRepository.save(profile);
     }

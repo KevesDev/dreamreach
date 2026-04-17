@@ -4,6 +4,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 /**
  * DTO for sending the user's profile data to the React dashboard.
  */
@@ -35,4 +37,6 @@ public class PlayerProfileResponse {
     // Population metrics needed for the HUD
     private int totalPopulation;
     private int maxPopulation; // Derived from houses
+
+    private List<ConstructionTaskResponse> activeConstructions;
 }
