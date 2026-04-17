@@ -7,7 +7,8 @@ CREATE TABLE construction_tasks (
                                     start_time TIMESTAMP NOT NULL,
                                     completion_time TIMESTAMP NOT NULL,
 
-                                    CONSTRAINT fk_profile_construction FOREIGN KEY (profile_id) REFERENCES player_profiles(id),
+    -- Corrected to singular 'player_profile' to match your V3 schema
+                                    CONSTRAINT fk_profile_construction FOREIGN KEY (profile_id) REFERENCES player_profile(id),
                                     CONSTRAINT unique_build_per_type UNIQUE (profile_id, building_type)
 );
 
