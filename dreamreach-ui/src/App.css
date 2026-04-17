@@ -88,6 +88,28 @@ h1, h2, h3 {
   font-weight: 600;
 }
 
+@keyframes goldenPulse {
+  0% { box-shadow: 0 0 5px rgba(212, 175, 55, 0.2); }
+  50% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.8), inset 0 0 5px rgba(212, 175, 55, 0.3); }
+  100% { box-shadow: 0 0 5px rgba(212, 175, 55, 0.2); }
+}
+
+.button--claim {
+  animation: goldenPulse 2s infinite ease-in-out;
+  background-color: rgba(212, 175, 55, 0.1);
+  border: 1px solid var(--accent-gold);
+  color: var(--accent-gold);
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.button--claim:hover {
+  background-color: var(--accent-gold);
+  color: #000; /* Dark text for contrast on hover */
+  box-shadow: 0 0 25px rgba(212, 175, 55, 1);
+  transform: translateY(-2px);
+}
+
 .panel {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);

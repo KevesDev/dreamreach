@@ -9,12 +9,15 @@ export default function Layout() {
     const location = useLocation();
 
     const accumulatorRef = useRef({ wood: 0, stone: 0, food: 0 });
+    // Track the exact timestamp of the last tick to handle browser timer drift
+    const lastTickRef = useRef<number>(Date.now());
 
     const fetchProfile = useCallback(() => {
         api.get('/player/me')
             .then(res => {
                 setProfile(res.data);
                 accumulatorRef.current = { wood: 0, stone: 0, food: 0 };
+                lastTickRef.current = Date.now(); // Sync the clock
             })
             .catch(() => {
                 localStorage.removeItem('dreamreach_token');
@@ -33,19 +36,24 @@ export default function Layout() {
             setProfile((prevProfile: any) => {
                 if (!prevProfile) return null;
 
+                // Calculate exact time passed since the last interval fired (Delta-Time)
+                const now = Date.now();
+                const dtSeconds = (now - lastTickRef.current) / 1000;
+                lastTickRef.current = now;
+
                 const woodPerSec = (prevProfile.woodRate || 0) / 3600;
                 const stonePerSec = (prevProfile.stoneRate || 0) / 3600;
                 const foodPerSec = (prevProfile.foodRate || 0) / 3600;
 
-                accumulatorRef.current.wood += woodPerSec;
-                accumulatorRef.current.stone += stonePerSec;
-                accumulatorRef.current.food += foodPerSec;
+                // Multiply by the actual time elapsed, ensuring no lost math if the browser lags
+                accumulatorRef.current.wood += woodPerSec * dtSeconds;
+                accumulatorRef.current.stone += stonePerSec * dtSeconds;
+                accumulatorRef.current.food += foodPerSec * dtSeconds;
 
                 let newPendingWood = prevProfile.pendingWood;
                 let newPendingStone = prevProfile.pendingStone;
                 let newPendingFood = prevProfile.pendingFood;
 
-                // Only tick the PENDING resources visually
                 if (Math.abs(accumulatorRef.current.wood) >= 1) {
                     const minted = Math.trunc(accumulatorRef.current.wood);
                     newPendingWood += minted;
@@ -60,6 +68,16 @@ export default function Layout() {
                     const minted = Math.trunc(accumulatorRef.current.food);
                     newPendingFood += minted;
                     accumulatorRef.current.food -= minted;
+                }
+
+                // If no whole resources were minted, abort the state update.
+                // This stops React from needlessly re-rendering the DOM 120 times for nothing.
+                if (
+                    newPendingWood === prevProfile.pendingWood &&
+                    newPendingStone === prevProfile.pendingStone &&
+                    newPendingFood === prevProfile.pendingFood
+                ) {
+                    return prevProfile;
                 }
 
                 return {
@@ -100,7 +118,6 @@ export default function Layout() {
                         <Icon name="population" size={14} /> {profile.totalPopulation}/{profile.maxPopulation}
                     </div>
 
-                    {/* Clear separation of Treasury, Pending, and Rate */}
                     <div className="hud-stat" title="Food">
                         <Icon name="food" size={14} /> {profile.food}
                         {profile.pendingFood !== 0 && <span style={{ color: 'var(--accent-gold)', marginLeft: '4px' }}>(+{profile.pendingFood})</span>}
@@ -125,9 +142,10 @@ export default function Layout() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    {/* The dynamic Collect Button */}
                     {hasPendingResources && (
-                        <button onClick={handleClaim} className="button--primary" style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
-                            Collect
+                        <button onClick={handleClaim} className="button button--claim" style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
+                            Collect Cargo
                         </button>
                     )}
 
