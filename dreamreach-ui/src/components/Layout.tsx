@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/client';
+import { Icon } from './Icon';
 
 interface PlayerProfile {
     email: string;
@@ -17,18 +18,22 @@ interface PlayerProfile {
 
 export default function Layout() {
     const [profile, setProfile] = useState<PlayerProfile | null>(null);
+    const [isChatOpen, setIsChatOpen] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
 
+    // Fetch profile and handle auth redirection
     useEffect(() => {
-        // Fetch the profile once for the global HUD
-        api.get('/player/me')
-            .then(res => setProfile(res.data))
-            .catch(() => {
-                // If token is invalid, kick to login
+        const fetchProfile = async () => {
+            try {
+                const res = await api.get('/player/me');
+                setProfile(res.data);
+            } catch (err) {
                 localStorage.removeItem('dreamreach_token');
                 navigate('/login');
-            });
+            }
+        };
+        fetchProfile();
     }, [navigate]);
 
     const handleLogout = () => {
@@ -37,60 +42,138 @@ export default function Layout() {
     };
 
     if (!profile) {
-        return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>Loading Secure Interface...</div>;
+        return (
+            <div className="panel" style={{ margin: '100px auto', maxWidth: '300px', textAlign: 'center' }}>
+                <p style={{ fontFamily: 'var(--font-heading)' }}>Synchronizing...</p>
+            </div>
+        );
     }
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f4f6f8' }}>
-            {/* TOP HUD */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: '#1e293b', color: 'white' }}>
-                <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
-                    {profile.displayName} <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '10px' }}>Lv. 1</span>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+
+            {/* 7. HUD (TOP BAR) - Thin, persistent horizontal bar */}
+            <header className="hud">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+                    <h3 style={{ fontSize: '1rem', color: 'var(--accent-gold)' }}>DREAMREACH</h3>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                        {profile.displayName} <span style={{ color: 'var(--text-muted)' }}>Lv. 1</span>
+                    </div>
                 </div>
 
-                {/* LIVE ECONOMY METRICS */}
-                <div style={{ display: 'flex', gap: '20px', fontSize: '0.9rem', alignItems: 'center' }}>
-                    <div title="Population" style={{ color: profile.totalPopulation >= profile.maxPopulation ? '#ef4444' : 'inherit' }}>
-                        👥 {profile.totalPopulation}/{profile.maxPopulation}
+                {/* 2. CENTER: RESOURCES (with +/hr tickers) */}
+                <div style={{ display: 'flex', gap: 'var(--space-xl)', alignItems: 'center' }}>
+                    <div className="hud-stat" title="Population">
+                        <Icon name="population" size={14} style={{ marginRight: 'var(--space-xs)', color: 'var(--text-muted)' }} />
+                        <span style={{ color: profile.totalPopulation >= profile.maxPopulation ? 'var(--danger)' : 'var(--text-primary)' }}>
+                            {profile.totalPopulation}/{profile.maxPopulation}
+                        </span>
                     </div>
-                    <div title="Food">🌾 {profile.food}</div>
-                    <div title="Wood">🪵 {profile.wood}</div>
-                    <div title="Stone">𪨧 {profile.stone}</div>
-                    <div title="Gold" style={{ color: '#fbbf24', fontWeight: 'bold' }}>💰 {profile.gold}</div>
-                    <div title="Gems" style={{ color: '#60a5fa', fontWeight: 'bold' }}>💎 {profile.gems}</div>
 
-                    <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold', marginLeft: '10px' }}>Logout</button>
+                    <div className="hud-stat" title="Food">
+                        <Icon name="food" size={14} style={{ marginRight: 'var(--space-xs)', color: 'var(--text-muted)' }} />
+                        {profile.food} <span style={{ color: 'var(--success)', fontSize: '0.7rem' }}>+12/hr</span>
+                    </div>
+
+                    <div className="hud-stat" title="Wood">
+                        <Icon name="wood" size={14} style={{ marginRight: 'var(--space-xs)', color: 'var(--text-muted)' }} />
+                        {profile.wood} <span style={{ color: 'var(--success)', fontSize: '0.7rem' }}>+5/hr</span>
+                    </div>
+
+                    <div className="hud-stat" title="Stone">
+                        <Icon name="stone" size={14} style={{ marginRight: 'var(--space-xs)', color: 'var(--text-muted)' }} />
+                        {profile.stone} <span style={{ color: 'var(--success)', fontSize: '0.7rem' }}>+2/hr</span>
+                    </div>
+                </div>
+
+                {/* 2. RIGHT: CURRENCY & UTILITY */}
+                <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'center' }}>
+                    <div style={{ color: 'var(--accent-gold)', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                        <Icon name="gold" size={14} style={{ marginRight: 'var(--space-xs)' }} />
+                        {profile.gold}
+                    </div>
+                    <div style={{ color: 'var(--accent-blue)', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                        <Icon name="gems" size={14} style={{ marginRight: 'var(--space-xs)' }} />
+                        {profile.gems}
+                    </div>
+
+                    <button
+                        className="button"
+                        style={{ padding: '4px 8px', marginLeft: 'var(--space-md)' }}
+                        onClick={() => setIsChatOpen(!isChatOpen)}
+                    >
+                        Chat
+                    </button>
+
+                    <button onClick={handleLogout} className="button--danger" style={{ padding: '4px 8px' }}>
+                        <Icon name="logout" size={14} />
+                    </button>
                 </div>
             </header>
 
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* SIDE NAVIGATION */}
-                <nav style={{ width: '200px', backgroundColor: '#ffffff', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', padding: '20px 0' }}>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+
+                {/* NAVIGATION SIDEBAR (Desktop) */}
+                <nav style={{ width: '220px', background: 'var(--bg-panel)', borderRight: '1px solid var(--border-subtle)', padding: 'var(--space-md) 0' }}>
                     <Link
                         to="/dashboard"
-                        style={{ padding: '15px 20px', textDecoration: 'none', color: location.pathname === '/dashboard' ? '#2563eb' : '#475569', backgroundColor: location.pathname === '/dashboard' ? '#eff6ff' : 'transparent', fontWeight: location.pathname === '/dashboard' ? 'bold' : 'normal' }}
+                        className={`list-item ${location.pathname === '/dashboard' ? 'active' : ''}`}
+                        style={{ textDecoration: 'none', color: location.pathname === '/dashboard' ? 'var(--accent-gold)' : 'var(--text-secondary)' }}
                     >
-                        🏠 Dashboard
+                        <Icon name="home" size={18} style={{ marginRight: 'var(--space-md)' }} /> Overview
+                    </Link>
+                    <Link
+                        to="/kingdom"
+                        className={`list-item ${location.pathname === '/kingdom' ? 'active' : ''}`}
+                        style={{ textDecoration: 'none', color: location.pathname === '/kingdom' ? 'var(--accent-gold)' : 'var(--text-secondary)' }}
+                    >
+                        <Icon name="home" size={18} style={{ marginRight: 'var(--space-md)' }} /> Kingdom
                     </Link>
                     <Link
                         to="/roster"
-                        style={{ padding: '15px 20px', textDecoration: 'none', color: location.pathname === '/roster' ? '#2563eb' : '#475569', backgroundColor: location.pathname === '/roster' ? '#eff6ff' : 'transparent', fontWeight: location.pathname === '/roster' ? 'bold' : 'normal' }}
+                        className={`list-item ${location.pathname === '/roster' ? 'active' : ''}`}
+                        style={{ textDecoration: 'none', color: location.pathname === '/roster' ? 'var(--accent-gold)' : 'var(--text-secondary)' }}
                     >
-                        ⚔️ Roster
+                        <Icon name="combat" size={18} style={{ marginRight: 'var(--space-md)' }} /> War Room
                     </Link>
                     <Link
                         to="/summon"
-                        style={{ padding: '15px 20px', textDecoration: 'none', color: location.pathname === '/summon' ? '#2563eb' : '#475569', backgroundColor: location.pathname === '/summon' ? '#eff6ff' : 'transparent', fontWeight: location.pathname === '/summon' ? 'bold' : 'normal' }}
+                        className={`list-item ${location.pathname === '/summon' ? 'active' : ''}`}
+                        style={{ textDecoration: 'none', color: location.pathname === '/summon' ? 'var(--accent-gold)' : 'var(--text-secondary)' }}
                     >
-                        ✨ Summon
+                        <Icon name="summon" size={18} style={{ marginRight: 'var(--space-md)' }} /> Summon
                     </Link>
                 </nav>
 
                 {/* MAIN CONTENT AREA */}
-                <main style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
-                    {/* The Outlet passes the profile down to child components so they don't have to fetch it again */}
+                <main style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-main)', position: 'relative' }}>
                     <Outlet context={{ profile }} />
                 </main>
+
+                {/* CHAT SYSTEM (Right-side drawer) */}
+                <aside
+                    className="panel"
+                    style={{
+                        width: '300px',
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        zIndex: 50,
+                        transform: isChatOpen ? 'translateX(0)' : 'translateX(100%)',
+                        transition: 'transform 0.3s ease',
+                        borderRadius: 0,
+                        borderLeft: '1px solid var(--border-strong)'
+                    }}
+                >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+                        <h4 style={{ fontSize: '0.9rem' }}>Global Chat</h4>
+                        <button className="button" style={{ padding: '2px 8px' }} onClick={() => setIsChatOpen(false)}>×</button>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '100px' }}>
+                        No messages yet.
+                    </div>
+                </aside>
             </div>
         </div>
     );
