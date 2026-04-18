@@ -125,7 +125,6 @@ export default function BuildingSidePanel({
         ? (profile?.wood >= selectedGroup.cost.wood && profile?.stone >= selectedGroup.cost.stone)
         : true;
 
-    // Strict profile values rather than fallbacks to maintain consistency with GameEconomyConfig
     const hapHigh = profile.maxHappiness * 0.75;
     const hapLow = profile.maxHappiness * 0.25;
 
@@ -284,7 +283,7 @@ export default function BuildingSidePanel({
                                     )}
                                 </div>
                             ) : (
-                                selectedGroup.instances.length === 0 && (
+                                (selectedGroup.type !== 'tavern' || selectedGroup.instances.length === 0) && (
                                     <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-sm)', padding: '12px', borderRadius: '8px' }}>
                                         {selectedGroup.cost && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--border-subtle)' }}>

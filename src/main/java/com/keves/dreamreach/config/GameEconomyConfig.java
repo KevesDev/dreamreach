@@ -73,18 +73,18 @@ public class GameEconomyConfig {
     // --- CONSTRUCTION BASE COSTS (Wood, Stone) ---
     // TODO: these might scale by level (e.g., cost * level^1.5)
     private int costHouseWood = 50;
-    private int costHouseStone = 10;
+    private int costHouseStone = 20;
     private int costBakeryWood = 100;
-    private int costBakeryStone = 50;
+    private int costBakeryStone = 80;
     private int costLodgeWood = 120;
-    private int costLodgeStone = 30;
+    private int costLodgeStone = 50;
 
     private int costTowerWood = 100;
     private int costTowerStone = 100;
 
     // The base construction cost for the Tavern
-    private int costTavernWood = 200;
-    private int costTavernStone = 150;
+    private int costTavernWood = 10;
+    private int costTavernStone = 10;
 
     // --- CONSTRUCTION BASE TIMERS (in seconds) ---
     private int buildTimeHouse = 60;     // 1 min
@@ -97,13 +97,13 @@ public class GameEconomyConfig {
 
     // --- TAVERN RECRUITMENT LOGIC ---
     // The required Keep Level to construct or access the Tavern
-    private int tavernUnlockLevel = 5;
+    private int tavernUnlockLevel = 1;
 
     // How often (in minutes) the server calculates if a hero arrived
-    private int tavernCheckIntervalMinutes = 60;
+    private int tavernCheckIntervalMinutes = 1;
 
     // The percentage chance (0.0 to 1.0) per interval that an empty slot gets a hero
-    private double tavernArrivalChance = 0.15;
+    private double tavernArrivalChance = 0.5;
 
     // How long (in hours) a hero will wait in the Tavern before leaving
     private int tavernStayDurationHours = 48;
