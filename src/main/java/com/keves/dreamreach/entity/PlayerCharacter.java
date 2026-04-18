@@ -1,5 +1,6 @@
 package com.keves.dreamreach.entity;
 
+import com.keves.dreamreach.enums.Rarity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -74,8 +75,12 @@ public class PlayerCharacter {
     private String armorTier = "BASIC";
 
     // -----------------------------------------------------------------
-    // BONUS ATTRIBUTES (from leveling or RNG)
+    // ROLLED PROPERTIES (Overriding Template)
     // -----------------------------------------------------------------
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rolled_rarity")
+    private Rarity rolledRarity;
 
     @Column(name = "bonus_str", nullable = false)
     private int bonusStr = 0;

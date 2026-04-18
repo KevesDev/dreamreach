@@ -1,9 +1,12 @@
 package com.keves.dreamreach.service;
 
 import com.keves.dreamreach.config.GameEconomyConfig;
+import com.keves.dreamreach.dto.CharacterRosterResponse;
+import com.keves.dreamreach.dto.TavernListingResponse;
 import com.keves.dreamreach.entity.BuildingInstance;
 import com.keves.dreamreach.entity.CharacterTemplate;
 import com.keves.dreamreach.entity.PlayerProfile;
+import com.keves.dreamreach.entity.PlayerResources;
 import com.keves.dreamreach.entity.RecruitmentPool;
 import com.keves.dreamreach.entity.TavernListing;
 import com.keves.dreamreach.repository.PlayerProfileRepository;
@@ -17,9 +20,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 
-/**
- * Service handling the offline catch-up logic for Tavern hero arrivals.
- */
 @Service
 public class TavernService {
 
@@ -27,33 +27,44 @@ public class TavernService {
     private final PlayerProfileRepository profileRepository;
     private final TavernListingRepository tavernListingRepository;
     private final RecruitmentPoolRepository recruitmentPoolRepository;
+    private final GachaService gachaService;
     private final Random random = new Random();
 
     public TavernService(GameEconomyConfig config,
                          PlayerProfileRepository profileRepository,
                          TavernListingRepository tavernListingRepository,
-                         RecruitmentPoolRepository recruitmentPoolRepository) {
+                         RecruitmentPoolRepository recruitmentPoolRepository,
+                         GachaService gachaService) {
         this.config = config;
         this.profileRepository = profileRepository;
         this.tavernListingRepository = tavernListingRepository;
         this.recruitmentPoolRepository = recruitmentPoolRepository;
+        this.gachaService = gachaService;
     }
 
-    /**
-     * Engine to process organic hero arrivals. Calculates missed intervals
-     * since the player's last check to ensure fairness for offline time.
-     */
+    @Transactional(readOnly = true)
+    public TavernListingResponse getActiveListing(PlayerProfile profile) {
+        return tavernListingRepository.findByProfileId(profile.getId())
+                .map(listing -> TavernListingResponse.builder()
+                        .listingId(listing.getId())
+                        .name(listing.getCharacterTemplate().getName())
+                        .dndClass(listing.getCharacterTemplate().getDndClass().name())
+                        .portraitUrl(listing.getCharacterTemplate().getPortraitUrl())
+                        .goldCost(listing.getGoldCost())
+                        .gemCost(listing.getGemCost())
+                        .expiryTimeEpoch(listing.getExpiryTime().toEpochMilli())
+                        .build())
+                .orElse(null);
+    }
+
     @Transactional
     public void processArrivals(PlayerProfile profile) {
-        // Validation: Ensure player has reached the Keep level required for the Tavern
         int keepLevel = profile.getBuildings().stream()
                 .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
                 .mapToInt(BuildingInstance::getLevel)
                 .max().orElse(1);
 
-        if (keepLevel < config.getTavernUnlockLevel()) {
-            return;
-        }
+        if (keepLevel < config.getTavernUnlockLevel()) return;
 
         Instant now = Instant.now();
         Instant lastCheck = profile.getLastTavernCheckTime();
@@ -65,37 +76,30 @@ public class TavernService {
         long minutesPassed = Duration.between(lastCheck, now).toMinutes();
         long intervals = minutesPassed / config.getTavernCheckIntervalMinutes();
 
-        if (intervals <= 0) {
-            return; // Not enough time has passed for a new roll
-        }
+        if (intervals <= 0) return;
 
         TavernListing currentListing = tavernListingRepository.findByProfileId(profile.getId()).orElse(null);
         int intervalsProcessed = 0;
 
         for (int i = 0; i < intervals; i++) {
             intervalsProcessed++;
-
-            // To simulate time accurately, we calculate the exact moment this roll occurred
             Instant simulatedTime = lastCheck.plus(Duration.ofMinutes((long) intervalsProcessed * config.getTavernCheckIntervalMinutes()));
 
-            // Check if there is a hero and if they have expired during this simulated step
             if (currentListing != null) {
                 if (simulatedTime.isAfter(currentListing.getExpiryTime())) {
                     tavernListingRepository.delete(currentListing);
                     currentListing = null;
                 } else {
-                    continue; // Slot is full and the hero is still waiting, skip this arrival roll
+                    continue;
                 }
             }
 
-            // Slot is empty, roll for a new arrival
             if (random.nextDouble() <= config.getTavernArrivalChance()) {
                 generateNewListing(profile, simulatedTime);
-                break; // A hero arrived, stop evaluating further steps
+                break;
             }
         }
 
-        // Advance the check time by the intervals actually processed to save the remaining "unused" minutes
         profile.setLastTavernCheckTime(lastCheck.plus(Duration.ofMinutes((long) intervalsProcessed * config.getTavernCheckIntervalMinutes())));
         profileRepository.save(profile);
     }
@@ -104,7 +108,6 @@ public class TavernService {
         List<RecruitmentPool> pool = recruitmentPoolRepository.findAll();
         if (pool.isEmpty()) return;
 
-        // Weighted random selection from the roster
         int totalWeight = pool.stream().mapToInt(RecruitmentPool::getWeight).sum();
         int roll = random.nextInt(totalWeight);
 
@@ -118,9 +121,7 @@ public class TavernService {
             }
         }
 
-        if (selected == null) {
-            selected = pool.getLast();
-        }
+        if (selected == null) selected = pool.getLast();
 
         CharacterTemplate template = selected.getCharacterTemplate();
 
@@ -133,5 +134,40 @@ public class TavernService {
         listing.setGemCost(template.getBaseGemCost());
 
         tavernListingRepository.save(listing);
+    }
+
+    /**
+     * Executes the Tavern transaction. Deducts currency, cleans up the listing,
+     * and delegates the actual hero RNG generation to the universal GachaService.
+     */
+    @Transactional
+    public CharacterRosterResponse recruitHero(PlayerProfile profile, String currencyType) {
+        TavernListing listing = tavernListingRepository.findByProfileId(profile.getId())
+                .orElseThrow(() -> new IllegalStateException("No hero is currently waiting in the Tavern."));
+
+        if (listing.getExpiryTime().isBefore(Instant.now())) {
+            tavernListingRepository.delete(listing);
+            throw new IllegalStateException("The hero got tired of waiting and left the Tavern.");
+        }
+
+        PlayerResources resources = profile.getResources();
+        if (currencyType.equalsIgnoreCase("gold")) {
+            if (resources.getGold() < listing.getGoldCost()) throw new IllegalStateException("Not enough Gold.");
+            resources.setGold(resources.getGold() - listing.getGoldCost());
+        } else if (currencyType.equalsIgnoreCase("gems")) {
+            if (resources.getGems() < listing.getGemCost()) throw new IllegalStateException("Not enough Gems.");
+            resources.setGems(resources.getGems() - listing.getGemCost());
+        } else {
+            throw new IllegalArgumentException("Invalid currency type.");
+        }
+
+        // Save the deducted currency
+        profileRepository.save(profile);
+
+        // Remove the hero from the Tavern
+        tavernListingRepository.delete(listing);
+
+        // Delegate the core pulling logic to the Universal Engine
+        return gachaService.pullCharacter(profile, listing.getCharacterTemplate());
     }
 }

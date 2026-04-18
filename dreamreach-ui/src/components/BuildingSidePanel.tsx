@@ -1,5 +1,6 @@
-import type { BuildingGroup, BuildingInstance, PlayerProfile, ConstructionTaskResponse } from '../views/KingdomView';
+import type { BuildingGroup, BuildingInstance, PlayerProfile, ConstructionTaskResponse, TavernListing } from '../views/KingdomView';
 import api from '../api/client';
+import { Icon } from './Icon';
 
 interface BuildingSidePanelProps {
     selectedGroup: BuildingGroup;
@@ -7,6 +8,8 @@ interface BuildingSidePanelProps {
     profile: PlayerProfile;
     now: number;
     isBusy: boolean;
+    tavernListing?: TavernListing | null;
+    onRecruit?: (currency: 'gold' | 'gems') => void;
     onClose: () => void;
     onSelectInstance: (instance: BuildingInstance | null) => void;
     onConstruct: (type: string) => void;
@@ -20,6 +23,8 @@ export default function BuildingSidePanel({
                                               profile,
                                               now,
                                               isBusy,
+                                              tavernListing,
+                                              onRecruit,
                                               onClose,
                                               onSelectInstance,
                                               onConstruct,
@@ -27,7 +32,6 @@ export default function BuildingSidePanel({
                                               fetchProfile
                                           }: BuildingSidePanelProps) {
 
-    // Look up the "live" version of the selected instance from the profile to ensure UI updates in real-time
     const liveInstance = profile.buildings?.find(b => b.id === selectedInstance?.id);
     const displayInstance = liveInstance ? {
         ...liveInstance,
@@ -47,10 +51,6 @@ export default function BuildingSidePanel({
         }
     };
 
-    /**
-     * Logic to calculate the number of trained professionals of a specific type
-     * who are not currently assigned to any physical structure.
-     */
     const getUnassignedCount = (type: string) => {
         const total = type.toLowerCase() === 'bakery' ? profile?.bakers : profile?.hunters;
         const assigned = (profile?.buildings || [])
@@ -66,14 +66,6 @@ export default function BuildingSidePanel({
     };
 
     const formatTimeRemaining = (end: number, current: number) => {
-        if (current >= end) return "Ready!";
-        const diffSeconds = Math.ceil((end - current) / 1000);
-        const m = Math.floor(diffSeconds / 60);
-        const s = diffSeconds % 60;
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    };
-
-    const formatTimeRemainingTaxes = (end: number, current: number) => {
         if (current >= end) return "Ready!";
         const diffSeconds = Math.ceil((end - current) / 1000);
         const m = Math.floor(diffSeconds / 60);
@@ -101,10 +93,6 @@ export default function BuildingSidePanel({
         }
     };
 
-    /**
-     * Calls the assignment endpoint for a specific physical structure.
-     * Keeps the panel open to allow for multiple sequential assignments.
-     */
     const handleAssign = async () => {
         if (isBusy || !displayInstance) return;
         try {
@@ -115,10 +103,6 @@ export default function BuildingSidePanel({
         }
     };
 
-    /**
-     * Calls the removal endpoint for a specific physical structure.
-     * Keeps the panel open to allow for multiple sequential removals.
-     */
     const handleRemove = async () => {
         if (isBusy || !displayInstance) return;
         try {
@@ -136,6 +120,53 @@ export default function BuildingSidePanel({
     const maxHap = profile?.maxHappiness || 100;
     const hapHigh = maxHap * 0.75;
     const hapLow = maxHap * 0.25;
+
+    // --- TAVERN SPECIFIC UI ---
+    const renderTavernInterior = () => {
+        if (!tavernListing) {
+            return (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                    <Icon name="home" size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
+                    <p>The Tavern is currently empty.</p>
+                    <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>Check back later to see if any adventurers have arrived.</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)', textAlign: 'center' }}>
+                <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-lg)', color: 'var(--accent-gold)' }}>AN ADVENTURER ARRIVES</h4>
+
+                <img src={tavernListing.portraitUrl || '/assets/hero.png'} alt={tavernListing.name} style={{ width: '100px', height: '100px', borderRadius: '8px', border: '2px solid var(--border-strong)', marginBottom: '16px' }} />
+                <h3 style={{ margin: '0 0 4px 0' }}>{tavernListing.name}</h3>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '24px' }}>{tavernListing.dndClass}</p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <button
+                        className="button"
+                        disabled={isBusy || profile.gold < tavernListing.goldCost}
+                        onClick={() => onRecruit && onRecruit('gold')}
+                        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '12px' }}
+                    >
+                        Hire for {tavernListing.goldCost} <Icon name="gold" size={16} style={{ color: 'var(--accent-gold)' }} />
+                    </button>
+
+                    <button
+                        className="button"
+                        disabled={isBusy || profile.gems < tavernListing.gemCost}
+                        onClick={() => onRecruit && onRecruit('gems')}
+                        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '12px' }}
+                    >
+                        Hire for {tavernListing.gemCost} <Icon name="gems" size={16} style={{ color: '#a335ee' }} />
+                    </button>
+                </div>
+
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '16px' }}>
+                    Expires in: {formatTimeRemaining(tavernListing.expiryTimeEpoch, now)}
+                </p>
+            </div>
+        );
+    };
 
     return (
         <aside className="side-panel">
@@ -217,12 +248,20 @@ export default function BuildingSidePanel({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'var(--space-lg)' }}>
                         <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>YOUR STRUCTURES</h4>
                         {selectedGroup.instances.length === 0 && (<span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>You do not have any of these structures.</span>)}
-                        {selectedGroup.instances.map((instance, index) => (
-                            <div key={instance.id} className="instance-item" onClick={() => onSelectInstance(instance)}>
-                                <span className="instance-item-title">{selectedGroup.singularName} #{index + 1}</span>
-                                <span className="instance-item-level">Lvl {instance.level}</span>
-                            </div>
-                        ))}
+
+                        {/* Auto-select single instance buildings like the Tavern if they exist */}
+                        {selectedGroup.instances.length === 1 && selectedGroup.type === 'tavern' ? (
+                            <button className="button" style={{ width: '100%', padding: '12px' }} onClick={() => onSelectInstance(selectedGroup.instances[0])}>
+                                Enter the Tavern
+                            </button>
+                        ) : (
+                            selectedGroup.instances.map((instance, index) => (
+                                <div key={instance.id} className="instance-item" onClick={() => onSelectInstance(instance)}>
+                                    <span className="instance-item-title">{selectedGroup.singularName} #{index + 1}</span>
+                                    <span className="instance-item-level">Lvl {instance.level}</span>
+                                </div>
+                            ))
+                        )}
 
                         {selectedGroup.type !== 'keep' && (
                             activeTask ? (
@@ -239,16 +278,24 @@ export default function BuildingSidePanel({
                                     )}
                                 </div>
                             ) : (
-                                <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-sm)', padding: '12px', borderRadius: '8px' }}>
-                                    {selectedGroup.cost && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--border-subtle)' }}>
-                                            <span>Cost: <span style={{ color: canAfford ? 'var(--accent-gold)' : 'var(--danger)' }}>{selectedGroup.cost.wood} Wood, {selectedGroup.cost.stone} Stone</span></span>
-                                            <span>⏱ {Math.floor(selectedGroup.cost.timeSeconds / 60)}m {selectedGroup.cost.timeSeconds % 60 > 0 ? `${selectedGroup.cost.timeSeconds % 60}s` : ''}</span>
-                                        </div>
-                                    )}
-                                    <button className="button" style={{ width: '100%' }} onClick={() => onConstruct(selectedGroup.type)} disabled={isBusy || !canAfford}>+ Construct New</button>
-                                    {!canAfford && (<p style={{ fontSize: '0.7rem', color: 'var(--danger)', textAlign: 'center', marginTop: '8px' }}>Not enough resources</p>)}
-                                </div>
+                                selectedGroup.instances.length === 0 && (
+                                    <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-sm)', padding: '12px', borderRadius: '8px' }}>
+                                        {selectedGroup.cost && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--border-subtle)' }}>
+                                                <span>Cost: <span style={{ color: canAfford ? 'var(--accent-gold)' : 'var(--danger)' }}>{selectedGroup.cost.wood} Wood, {selectedGroup.cost.stone} Stone</span></span>
+                                                <span>⏱ {Math.floor(selectedGroup.cost.timeSeconds / 60)}m {selectedGroup.cost.timeSeconds % 60 > 0 ? `${selectedGroup.cost.timeSeconds % 60}s` : ''}</span>
+                                            </div>
+                                        )}
+                                        {selectedGroup.type === 'tavern' && profile.keepLevel < 5 ? (
+                                            <p style={{ fontSize: '0.8rem', color: 'var(--danger)', textAlign: 'center', margin: 0 }}>Requires Keep Level 5</p>
+                                        ) : (
+                                            <>
+                                                <button className="button" style={{ width: '100%' }} onClick={() => onConstruct(selectedGroup.type)} disabled={isBusy || !canAfford}>+ Construct New</button>
+                                                {!canAfford && (<p style={{ fontSize: '0.7rem', color: 'var(--danger)', textAlign: 'center', marginTop: '8px' }}>Not enough resources</p>)}
+                                            </>
+                                        )}
+                                    </div>
+                                )
                             )
                         )}
                     </div>
@@ -257,30 +304,35 @@ export default function BuildingSidePanel({
 
             {displayInstance && (
                 <>
-                    <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
-                        <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-md)', color: 'var(--text-muted)' }}>MANAGEMENT</h4>
-                        {displayInstance.maxWorkers > 0 && (
-                            <div style={{ marginBottom: 'var(--space-lg)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
-                                    <span>Assigned Workers:</span>
-                                    <span style={{ color: 'var(--accent-gold)' }}>{displayInstance.assignedWorkers} / {displayInstance.maxWorkers}</span>
+                    {selectedGroup.type === 'tavern' ? (
+                        renderTavernInterior()
+                    ) : (
+                        <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
+                            <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-md)', color: 'var(--text-muted)' }}>MANAGEMENT</h4>
+                            {displayInstance.maxWorkers > 0 && (
+                                <div style={{ marginBottom: 'var(--space-lg)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
+                                        <span>Assigned Workers:</span>
+                                        <span style={{ color: 'var(--accent-gold)' }}>{displayInstance.assignedWorkers} / {displayInstance.maxWorkers}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button className="button" style={{ flex: 1 }} disabled={isBusy || displayInstance.assignedWorkers === 0} onClick={handleRemove}>- Remove</button>
+                                        <button className="button" style={{ flex: 1 }} disabled={isBusy || displayInstance.assignedWorkers === displayInstance.maxWorkers || getUnassignedCount(selectedGroup.type) === 0} onClick={handleAssign}>+ Assign</button>
+                                    </div>
+                                    {getUnassignedCount(selectedGroup.type) === 0 && displayInstance.assignedWorkers < displayInstance.maxWorkers && (
+                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>No available {selectedGroup.singularName}s trained.</p>
+                                    )}
                                 </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button className="button" style={{ flex: 1 }} disabled={isBusy || displayInstance.assignedWorkers === 0} onClick={handleRemove}>- Remove</button>
-                                    <button className="button" style={{ flex: 1 }} disabled={isBusy || displayInstance.assignedWorkers === displayInstance.maxWorkers || getUnassignedCount(selectedGroup.type) === 0} onClick={handleAssign}>+ Assign</button>
+                            )}
+                            {displayInstance.productionRate > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-md)' }}>
+                                    <span>Current Output:</span>
+                                    <span style={{ color: 'var(--success)' }}>+{displayInstance.assignedWorkers * displayInstance.productionRate}/hr</span>
                                 </div>
-                                {getUnassignedCount(selectedGroup.type) === 0 && displayInstance.assignedWorkers < displayInstance.maxWorkers && (
-                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>No available {selectedGroup.singularName}s trained.</p>
-                                )}
-                            </div>
-                        )}
-                        {displayInstance.productionRate > 0 && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-md)' }}>
-                                <span>Current Output:</span>
-                                <span style={{ color: 'var(--success)' }}>+{displayInstance.assignedWorkers * displayInstance.productionRate}/hr</span>
-                            </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
+
                     <div style={{ marginTop: 'auto' }}>
                         <button className="button--primary" style={{ width: '100%' }} disabled>UPGRADE TO LV.{displayInstance.level + 1}</button>
                         <p style={{ fontSize: '0.7rem', textAlign: 'center', marginTop: 'var(--space-sm)', color: 'var(--text-muted)' }}>{selectedGroup.type === 'keep' ? 'Upgrade requirements Not Met' : `Requires Keep Lvl ${displayInstance.level + 1}`}</p>
