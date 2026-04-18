@@ -11,14 +11,13 @@ import com.keves.dreamreach.repository.AllianceRepository;
 import com.keves.dreamreach.repository.CharacterTemplateRepository;
 import com.keves.dreamreach.repository.PlayerAccountRepository;
 import com.keves.dreamreach.repository.PlayerCharacterRepository;
+import com.keves.dreamreach.util.DndMathUtility;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/**
- * The seeder executes automatically when the application is started up.
- * It populates the database with baseline data for testing.
- */
+import java.util.List;
+
 @Component
 public class DataSeeder implements CommandLineRunner {
 
@@ -26,11 +25,8 @@ public class DataSeeder implements CommandLineRunner {
     private final PlayerAccountRepository accountRepository;
     private final CharacterTemplateRepository characterTemplateRepository;
     private final PlayerCharacterRepository playerCharacterRepository;
-
     private final PasswordEncoder passwordEncoder;
 
-    // Constructor injection for injecting dependencies in Spring.
-    // Preferred over the @Autowired annotation since it makes the class easier to unit test.
     public DataSeeder(AllianceRepository allianceRepository, PlayerAccountRepository accountRepository,
                       CharacterTemplateRepository characterTemplateRepository, PlayerCharacterRepository playerCharacterRepository,
                       PasswordEncoder passwordEncoder) {
@@ -43,11 +39,9 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Only seed if the db is empty in order to prevent duplicate key crashes on restart
         if (allianceRepository.count() == 0) {
             System.out.println("Bootstrapping test data...");
             try {
-                // Create and save a new Alliance first
                 Alliance horde = new Alliance();
                 horde.setName("The Horde");
                 horde.setTag("H");
@@ -56,51 +50,88 @@ public class DataSeeder implements CommandLineRunner {
                 horde.setAlliancePvpEnabled(true);
                 allianceRepository.save(horde);
 
-                // Create the Secure Account
                 PlayerAccount bobsAccount = new PlayerAccount();
                 bobsAccount.setEmail("bob@test.com");
-                bobsAccount.setPassword(passwordEncoder.encode("password123")); // Hashed
-                bobsAccount.setEnabled(true); // Bypass the email verification quarantine for testing
+                bobsAccount.setPassword(passwordEncoder.encode("password123"));
+                bobsAccount.setEnabled(true);
 
-                // Create the Identity Profile
                 PlayerProfile bobsProfile = new PlayerProfile();
                 bobsProfile.setDisplayName("Bob Derp");
                 bobsProfile.setPersonalPvpEnabled(false);
                 bobsProfile.setAlliance(horde);
 
-                // Establish the Bidirectional Link
                 bobsProfile.setAccount(bobsAccount);
                 bobsAccount.setProfile(bobsProfile);
-
-                // Save the Account (Cascades to save the Profile automatically)
                 accountRepository.save(bobsAccount);
 
-                // Create and save a character template
+                // --- 1. Uncommon Healer ---
                 CharacterTemplate goblinShaman = new CharacterTemplate();
                 goblinShaman.setName("Goblin Shaman");
                 goblinShaman.setRarity(Rarity.UNCOMMON);
                 goblinShaman.setDndClass(DndClass.CLERIC);
-                goblinShaman.setBaseStr(8);
-                goblinShaman.setBaseDex(14);
-                goblinShaman.setBaseCon(10);
-                goblinShaman.setBaseInt(12);
-                goblinShaman.setBaseWis(16);
-                goblinShaman.setBaseCha(10);
+                goblinShaman.setBaseStr(8); goblinShaman.setBaseDex(14); goblinShaman.setBaseCon(10);
+                goblinShaman.setBaseInt(12); goblinShaman.setBaseWis(16); goblinShaman.setBaseCha(10);
+                goblinShaman.setHitDieType(8);
+                goblinShaman.setPrimaryStat("WIS");
+                goblinShaman.setClassTags("[\"Magical\", \"Healer\"]");
+                goblinShaman.setFlavorQuips("{\"IDLE\": \"The spirits are restless.\"}");
+                goblinShaman.setPortraitUrl("/assets/hero.png");
 
-                // have the repo write the INSERT SQL to the character template db
-                characterTemplateRepository.save(goblinShaman);
+                // --- 2. Common Frontline ---
+                CharacterTemplate humanFighter = new CharacterTemplate();
+                humanFighter.setName("Human Vanguard");
+                humanFighter.setRarity(Rarity.COMMON);
+                humanFighter.setDndClass(DndClass.FIGHTER);
+                humanFighter.setBaseStr(16); humanFighter.setBaseDex(12); humanFighter.setBaseCon(14);
+                humanFighter.setBaseInt(10); humanFighter.setBaseWis(10); humanFighter.setBaseCha(10);
+                humanFighter.setHitDieType(10);
+                humanFighter.setPrimaryStat("STR");
+                humanFighter.setClassTags("[\"Brute\", \"Frontline\"]");
+                humanFighter.setFlavorQuips("{\"IDLE\": \"Ready for battle.\"}");
+                humanFighter.setPortraitUrl("/assets/hero.png");
 
-                // add an instance of the templated character to a player's 'deck'.
+                // --- 3. Epic Spellcaster ---
+                CharacterTemplate elfWizard = new CharacterTemplate();
+                elfWizard.setName("Elven Evoker");
+                elfWizard.setRarity(Rarity.EPIC);
+                elfWizard.setDndClass(DndClass.WIZARD);
+                elfWizard.setBaseStr(8); elfWizard.setBaseDex(14); elfWizard.setBaseCon(12);
+                elfWizard.setBaseInt(18); elfWizard.setBaseWis(12); elfWizard.setBaseCha(10);
+                elfWizard.setHitDieType(6);
+                elfWizard.setPrimaryStat("INT");
+                elfWizard.setClassTags("[\"Magical\", \"Scholar\"]");
+                elfWizard.setFlavorQuips("{\"IDLE\": \"So many spells, so little time.\"}");
+                elfWizard.setPortraitUrl("/assets/hero.png");
+
+                characterTemplateRepository.saveAll(List.of(goblinShaman, humanFighter, elfWizard));
+
+                // --- Instantiate Bob's Roster ---
                 PlayerCharacter playerGoblin = new PlayerCharacter();
                 playerGoblin.setOwner(bobsProfile);
                 playerGoblin.setTemplate(goblinShaman);
                 playerGoblin.setBonusWis(2);
+
+                int goblinConMod = DndMathUtility.calculateModifier(playerGoblin.getTotalConstitution());
+                int goblinHp = DndMathUtility.calculateMaxHp(1, goblinShaman.getHitDieType(), goblinConMod);
+                playerGoblin.setMaxHp(goblinHp);
+                playerGoblin.setCurrentHp(goblinHp);
                 playerCharacterRepository.save(playerGoblin);
+
+                PlayerCharacter playerWizard = new PlayerCharacter();
+                playerWizard.setOwner(bobsProfile);
+                playerWizard.setTemplate(elfWizard);
+
+                int wizConMod = DndMathUtility.calculateModifier(playerWizard.getTotalConstitution());
+                int wizHp = DndMathUtility.calculateMaxHp(1, elfWizard.getHitDieType(), wizConMod);
+                playerWizard.setMaxHp(wizHp);
+                playerWizard.setCurrentHp(wizHp);
+                playerWizard.setWeaponTier("GREAT");
+                playerCharacterRepository.save(playerWizard);
 
                 System.out.println("Added the test data!");
             }
             catch (Exception exception) {
-                System.out.print("Failed to seed new database.");
+                System.out.println("Failed to seed new database: " + exception.getMessage());
             }
         }
     }

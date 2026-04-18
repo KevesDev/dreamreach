@@ -35,8 +35,6 @@ public class CharacterTemplate {
     @Column(name = "name", unique = true, nullable = false, length = 100)
     private String name;
 
-    // @Enumerated(EnumType.STRING) tells JPA to save "RARE" in the database
-    // instead of a confusing integer like '2'.
     @Enumerated(EnumType.STRING)
     @Column(name = "rarity", nullable = false)
     private Rarity rarity;
@@ -63,4 +61,20 @@ public class CharacterTemplate {
 
     @Column(name = "base_cha", nullable = false)
     private int baseCha = 10;
+
+    // New D&D Mechanical Properties
+    @Column(name = "hit_die_type", nullable = false)
+    private int hitDieType = 8;
+
+    @Column(name = "primary_stat", nullable = false, length = 20)
+    private String primaryStat = "STR";
+
+    @Column(name = "class_tags", columnDefinition = "TEXT")
+    private String classTags;
+
+    @Column(name = "flavor_quips", columnDefinition = "TEXT")
+    private String flavorQuips;
+
+    @Column(name = "portrait_url")
+    private String portraitUrl;
 }
