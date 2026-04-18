@@ -34,9 +34,11 @@ public class PlayerProfileResponse {
     private int pendingWood;
     private int pendingStone;
 
-    // Population metrics needed for the HUD
+    // Population metrics needed for the HUD and Citizen Management
     private int totalPopulation;
-    private int maxPopulation; // Derived from houses
+    private int maxPopulation;
+    private int idlePeasants; // Added so UI knows how many can be trained
+    private int bakers;
 
     // Structure Counts
     private int keepLevel;
@@ -46,4 +48,5 @@ public class PlayerProfileResponse {
     private int huntingLodges;
 
     private List<ConstructionTaskResponse> activeConstructions;
+    private List<TrainingTaskResponse> activeTrainingTasks; // Added for the training queue UI
 }

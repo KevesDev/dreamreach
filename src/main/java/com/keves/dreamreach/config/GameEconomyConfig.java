@@ -66,6 +66,29 @@ public class GameEconomyConfig {
     private int buildTimeTower = 300;
     private int buildTimeLodge = 300;    // 5 mins
 
+// --- TRAINING COSTS & TIMERS ---
+    // Granular balancing for each profession type
+
+    // Woodcutter
+    private int costTrainWoodcutterGold = 10;
+    private int costTrainWoodcutterFood = 25;
+    private int trainTimeWoodcutterSeconds = 30;
+
+    // Stoneworker
+    private int costTrainStoneworkerGold = 15;
+    private int costTrainStoneworkerFood = 30;
+    private int trainTimeStoneworkerSeconds = 45;
+
+    // Hunter
+    private int costTrainHunterGold = 20;
+    private int costTrainHunterFood = 40;
+    private int trainTimeHunterSeconds = 60;
+
+    // Baker
+    private int costTrainBakerGold = 25;
+    private int costTrainBakerFood = 50;
+    private int trainTimeBakerSeconds = 90;
+
     // --- COMBAT / DEFENSE ---
     private int baseDefense = 10;
     private int defensePerTower = 25;
