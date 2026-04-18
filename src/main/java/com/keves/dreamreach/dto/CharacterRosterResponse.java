@@ -6,12 +6,6 @@ import lombok.Setter;
 
 import java.util.UUID;
 
-/**
- * Data Transfer Object.
- * This is a flat representation of a character formatted for frontend display.
- * Prevents infinite recursion from JPA bidirectional relationships -
- * ie PlayerProfile.alliance -> Alliance.members -> PlayerProfile
- */
 @Getter
 @Setter
 @Builder
@@ -22,10 +16,29 @@ public class CharacterRosterResponse {
     private String dndClass;
     private int level;
     private int currentXp;
+
+    // Base Stats
     private int totalStrength;
     private int totalDexterity;
     private int totalConstitution;
     private int totalIntelligence;
     private int totalWisdom;
     private int totalCharisma;
+
+    // Computed Modifiers
+    private int strMod;
+    private int dexMod;
+    private int conMod;
+    private int intMod;
+    private int wisMod;
+    private int chaMod;
+
+    // Vitals and Status
+    private int currentHp;
+    private int maxHp;
+    private int spentHitDice;
+    private String status;
+    private String weaponTier;
+    private String armorTier;
+    private String portraitUrl;
 }

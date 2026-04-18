@@ -9,7 +9,6 @@ export default function Layout() {
     const location = useLocation();
 
     const accumulatorRef = useRef({ wood: 0, stone: 0, food: 0 });
-    // Track the exact timestamp of the last tick to handle browser timer drift
     const lastTickRef = useRef<number>(Date.now());
 
     const fetchProfile = useCallback(() => {
@@ -17,7 +16,7 @@ export default function Layout() {
             .then(res => {
                 setProfile(res.data);
                 accumulatorRef.current = { wood: 0, stone: 0, food: 0 };
-                lastTickRef.current = Date.now(); // Sync the clock
+                lastTickRef.current = Date.now();
             })
             .catch(() => {
                 localStorage.removeItem('dreamreach_token');
@@ -36,7 +35,6 @@ export default function Layout() {
             setProfile((prevProfile: any) => {
                 if (!prevProfile) return null;
 
-                // Calculate exact time passed since the last interval fired (Delta-Time)
                 const now = Date.now();
                 const dtSeconds = (now - lastTickRef.current) / 1000;
                 lastTickRef.current = now;
@@ -45,7 +43,6 @@ export default function Layout() {
                 const stonePerSec = (prevProfile.stoneRate || 0) / 3600;
                 const foodPerSec = (prevProfile.foodRate || 0) / 3600;
 
-                // Multiply by the actual time elapsed, ensuring no lost math if the browser lags
                 accumulatorRef.current.wood += woodPerSec * dtSeconds;
                 accumulatorRef.current.stone += stonePerSec * dtSeconds;
                 accumulatorRef.current.food += foodPerSec * dtSeconds;
@@ -70,8 +67,6 @@ export default function Layout() {
                     accumulatorRef.current.food -= minted;
                 }
 
-                // If no whole resources were minted, abort the state update.
-                // This stops React from needlessly re-rendering the DOM 120 times for nothing.
                 if (
                     newPendingWood === prevProfile.pendingWood &&
                     newPendingStone === prevProfile.pendingStone &&
@@ -178,8 +173,8 @@ export default function Layout() {
                     <Link to="/kingdom" className={`list-item ${location.pathname === '/kingdom' ? 'active' : ''}`}>
                         <Icon name="kingdom" size={18} style={{ marginRight: '12px' }} /> Kingdom
                     </Link>
-                    <Link to="/roster" className={`list-item ${location.pathname === '/roster' ? 'active' : ''}`}>
-                        <Icon name="combat" size={18} style={{ marginRight: '12px' }} /> War Room
+                    <Link to="/heroes" className={`list-item ${location.pathname === '/heroes' ? 'active' : ''}`}>
+                        <Icon name="combat" size={18} style={{ marginRight: '12px' }} /> Heroes
                     </Link>
                     <Link to="/summon" className={`list-item ${location.pathname === '/summon' ? 'active' : ''}`}>
                         <Icon name="summon" size={18} style={{ marginRight: '12px' }} /> Summon
@@ -187,7 +182,6 @@ export default function Layout() {
                 </nav>
 
                 <main style={{ flex: 1, padding: 'var(--space-md)', overflowY: 'auto' }}>
-                    {/* Exposing fetchProfile to children so they can sync */}
                     <Outlet context={{ profile, fetchProfile }} />
                 </main>
             </div>

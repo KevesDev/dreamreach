@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.lang.reflect.Executable;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -28,24 +28,16 @@ public class PlayerCharacter {
     // RELATIONSHIPS
     // -----------------------------------------------------------------
 
-    /**
-     * Player that owns this character
-     * Uses FetchType.LAZY, meaning Spring won't query the db for the PlayerProfile
-     * until expressly calling getOwner(). Saves on memory.
-     */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)
     private PlayerProfile owner;
 
-    /**
-     * Blueprint for this character
-     */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "template_id", nullable = false)
     private CharacterTemplate template;
 
     // -----------------------------------------------------------------
-    // PROGRESSION
+    // PROGRESSION & VITALS (The Digital Character Sheet)
     // -----------------------------------------------------------------
 
     @Column(name = "current_level", nullable = false)
@@ -53,6 +45,33 @@ public class PlayerCharacter {
 
     @Column(name = "current_xp", nullable = false)
     private int currentXp = 0;
+
+    @Column(name = "current_hp", nullable = false)
+    private int currentHp = 10;
+
+    @Column(name = "max_hp", nullable = false)
+    private int maxHp = 10;
+
+    @Column(name = "current_mana", nullable = false)
+    private int currentMana = 0;
+
+    @Column(name = "max_mana", nullable = false)
+    private int maxMana = 0;
+
+    @Column(name = "spent_hit_dice", nullable = false)
+    private int spentHitDice = 0;
+
+    @Column(name = "status", nullable = false, length = 20)
+    private String status = "IDLE";
+
+    @Column(name = "long_rest_end_time")
+    private Instant longRestEndTime;
+
+    @Column(name = "weapon_tier", nullable = false, length = 20)
+    private String weaponTier = "BASIC";
+
+    @Column(name = "armor_tier", nullable = false, length = 20)
+    private String armorTier = "BASIC";
 
     // -----------------------------------------------------------------
     // BONUS ATTRIBUTES (from leveling or RNG)
@@ -79,11 +98,6 @@ public class PlayerCharacter {
     // -----------------------------------------------------------------
     // BUSINESS LOGIC
     // -----------------------------------------------------------------
-
-    /**
-     * Calculates the total attributes by combining the Blueprint base and the instance bonus.
-     * Uses standard DDD (Domain-Driven Design) by keeping logic inside the entity.
-     */
 
     public int getTotalStrength() {
         return this.template.getBaseStr() + this.bonusStr;

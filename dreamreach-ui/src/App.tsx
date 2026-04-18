@@ -4,10 +4,10 @@ import VerifyView from './views/VerifyView';
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import KingdomView from './views/KingdomView';
+import HeroesView from './views/HeroesView';
 import Layout from './components/Layout';
 
-// Placeholder components for new routes
-const RosterPlaceholder = () => <div className="panel"><h2>Your Roster (Under Construction)</h2></div>;
+// Placeholder component
 const SummonPlaceholder = () => <div className="panel"><h2>Summoning Portal (Under Construction)</h2></div>;
 
 export default function App() {
@@ -18,13 +18,11 @@ export default function App() {
                 <Route path="/register" element={<RegisterView />} />
                 <Route path="/verify" element={<VerifyView />} />
 
-                {/* Protected Routes wrapped in the Global Shell */}
                 <Route element={<Layout />}>
                     <Route path="/dashboard" element={<DashboardView />} />
                     <Route path="/kingdom" element={<KingdomView />} />
-                    <Route path="/roster" element={<RosterPlaceholder />} />
+                    <Route path="/heroes" element={<HeroesView />} />
                     <Route path="/summon" element={<SummonPlaceholder />} />
-                    {/* Default protected route */}
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 </Route>
 
