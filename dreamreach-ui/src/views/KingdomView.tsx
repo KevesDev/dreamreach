@@ -33,6 +33,8 @@ export interface BuildingConfigResponse {
     woodCost: number;
     stoneCost: number;
     buildTimeSeconds: number;
+    maxWorkers: number;
+    productionRate: number;
 }
 
 export interface PlayerProfile {
@@ -49,6 +51,16 @@ export interface PlayerProfile {
     wood: number;
     stone: number;
     gold: number;
+
+    pendingFood: number;
+    pendingWood: number;
+    pendingStone: number;
+    pendingGold: number;
+
+    happiness: number;
+    maxHappiness: number;
+    taxBracket: string;
+    lastTaxCollectionTimeEpoch: number;
 
     keepLevel: number;
     houses: number;
@@ -84,6 +96,7 @@ export interface BuildingGroup {
     description: string;
     cost?: BuildingCost;
     instances: BuildingInstance[];
+    isActionReady?: boolean;
 }
 
 export interface KingdomEvent {
@@ -129,6 +142,8 @@ export default function KingdomView() {
     const bakeryConfig = getBuildingConfig('bakery');
     const lodgeConfig = getBuildingConfig('lodge');
 
+    const canCollectTaxes = profile?.lastTaxCollectionTimeEpoch ? (now - profile.lastTaxCollectionTimeEpoch) >= 3600000 : false;
+
     const buildingGroups: BuildingGroup[] = [
         {
             type: 'keep',
@@ -136,6 +151,7 @@ export default function KingdomView() {
             singularName: 'Keep',
             icon: 'kingdom',
             description: 'The central hub of your kingdom. Upgrading it unlocks new tiers of structures.',
+            isActionReady: canCollectTaxes,
             instances: [{ id: 'keep-1', level: profile?.keepLevel || 1, workersAssigned: 0, maxWorkers: 0, productionRate: 0 }]
         },
         {
@@ -150,7 +166,11 @@ export default function KingdomView() {
                 timeSeconds: houseConfig.buildTimeSeconds
             } : undefined,
             instances: Array.from({ length: profile?.houses || 0 }).map((_, i) => ({
-                id: `house-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 0, productionRate: 0
+                id: `house-${i + 1}`,
+                level: 1,
+                workersAssigned: 0,
+                maxWorkers: houseConfig?.maxWorkers || 0,
+                productionRate: houseConfig?.productionRate || 0
             }))
         },
         {
@@ -165,7 +185,11 @@ export default function KingdomView() {
                 timeSeconds: bakeryConfig.buildTimeSeconds
             } : undefined,
             instances: Array.from({ length: profile?.bakeries || 0 }).map((_, i) => ({
-                id: `bakery-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 2, productionRate: 10
+                id: `bakery-${i + 1}`,
+                level: 1,
+                workersAssigned: 0,
+                maxWorkers: bakeryConfig?.maxWorkers || 0,
+                productionRate: bakeryConfig?.productionRate || 0
             }))
         },
         {
@@ -180,7 +204,11 @@ export default function KingdomView() {
                 timeSeconds: lodgeConfig.buildTimeSeconds
             } : undefined,
             instances: Array.from({ length: profile?.huntingLodges || 0 }).map((_, i) => ({
-                id: `lodge-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 2, productionRate: 0
+                id: `lodge-${i + 1}`,
+                level: 1,
+                workersAssigned: 0,
+                maxWorkers: lodgeConfig?.maxWorkers || 0,
+                productionRate: lodgeConfig?.productionRate || 0
             }))
         }
     ];
@@ -272,6 +300,7 @@ export default function KingdomView() {
                     onSelectInstance={setSelectedInstance}
                     onConstruct={handleConstruct}
                     onComplete={handleComplete}
+                    fetchProfile={fetchProfile}
                 />
             )}
         </div>

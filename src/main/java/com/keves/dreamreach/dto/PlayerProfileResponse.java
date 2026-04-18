@@ -34,6 +34,13 @@ public class PlayerProfileResponse {
     private int pendingFood;
     private int pendingWood;
     private int pendingStone;
+    private int pendingGold;
+
+    // Tax and Happiness Metrics
+    private int happiness;
+    private int maxHappiness;
+    private String taxBracket;
+    private long lastTaxCollectionTimeEpoch;
 
     // Population metrics needed for the HUD and Citizen Management
     private int totalPopulation;

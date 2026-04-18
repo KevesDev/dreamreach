@@ -124,19 +124,27 @@ public class PlayerController {
                 BuildingConfigResponse.builder().buildingType("house")
                         .woodCost(economyConfig.getCostHouseWood())
                         .stoneCost(economyConfig.getCostHouseStone())
-                        .buildTimeSeconds(economyConfig.getBuildTimeHouse()).build(),
+                        .buildTimeSeconds(economyConfig.getBuildTimeHouse())
+                        .maxWorkers(0)
+                        .productionRate(0).build(),
                 BuildingConfigResponse.builder().buildingType("bakery")
                         .woodCost(economyConfig.getCostBakeryWood())
                         .stoneCost(economyConfig.getCostBakeryStone())
-                        .buildTimeSeconds(economyConfig.getBuildTimeBakery()).build(),
+                        .buildTimeSeconds(economyConfig.getBuildTimeBakery())
+                        .maxWorkers(economyConfig.getMaxWorkersBakery())
+                        .productionRate(economyConfig.getFoodPerBakery()).build(),
                 BuildingConfigResponse.builder().buildingType("lodge")
                         .woodCost(economyConfig.getCostLodgeWood())
                         .stoneCost(economyConfig.getCostLodgeStone())
-                        .buildTimeSeconds(economyConfig.getBuildTimeLodge()).build(),
+                        .buildTimeSeconds(economyConfig.getBuildTimeLodge())
+                        .maxWorkers(economyConfig.getMaxWorkersLodge())
+                        .productionRate(economyConfig.getFoodPerHunter()).build(),
                 BuildingConfigResponse.builder().buildingType("tower")
                         .woodCost(economyConfig.getCostTowerWood())
                         .stoneCost(economyConfig.getCostTowerStone())
-                        .buildTimeSeconds(economyConfig.getBuildTimeTower()).build()
+                        .buildTimeSeconds(economyConfig.getBuildTimeTower())
+                        .maxWorkers(0)
+                        .productionRate(0).build()
         );
 
         PlayerProfileResponse response = PlayerProfileResponse.builder()
@@ -157,6 +165,12 @@ public class PlayerController {
                 .pendingFood(profile.getResources() != null ? profile.getResources().getPendingFood() : 0)
                 .pendingWood(profile.getResources() != null ? profile.getResources().getPendingWood() : 0)
                 .pendingStone(profile.getResources() != null ? profile.getResources().getPendingStone() : 0)
+                .pendingGold(profile.getResources() != null ? profile.getResources().getPendingGold() : 0)
+
+                .happiness(profile.getHappiness())
+                .maxHappiness(economyConfig.getMaxHappiness())
+                .taxBracket(profile.getTaxBracket())
+                .lastTaxCollectionTimeEpoch(profile.getLastTaxCollectionTime().toEpochMilli())
 
                 .totalPopulation(profile.getPopulation() != null ? profile.getPopulation().getTotalPopulation() : 0)
                 .maxPopulation(calculatedMaxPop)
@@ -175,7 +189,7 @@ public class PlayerController {
 
                 .activeConstructions(activeTasks)
                 .activeTrainingTasks(activeTrainingTasks)
-                .trainingConfigs(trainingConfigs) // Map it here
+                .trainingConfigs(trainingConfigs)
                 .buildingConfigs(buildingConfigs)
                 .build();
 
@@ -258,7 +272,7 @@ public class PlayerController {
         }
     }
 
-    // --- NEW TAX ENDPOINTS ---
+    // --- TAX ENDPOINTS ---
 
     @PostMapping("/taxes/bracket")
     public ResponseEntity<?> setTaxBracket(Authentication authentication, @RequestParam String bracket) {

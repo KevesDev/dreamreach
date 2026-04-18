@@ -20,7 +20,7 @@ export default function WorldLayer({
         <div className="world-layer">
             {buildingGroups.map((group) => {
                 const task = activeConstructions?.find(t => t.buildingType === group.type);
-                const isReady = task && now >= task.completionTimeEpoch;
+                const isReady = (task && now >= task.completionTimeEpoch) || group.isActionReady;
 
                 return (
                     <div
