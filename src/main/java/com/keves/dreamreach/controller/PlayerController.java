@@ -1,6 +1,7 @@
 package com.keves.dreamreach.controller;
 
 import com.keves.dreamreach.config.GameEconomyConfig;
+import com.keves.dreamreach.dto.BuildingConfigResponse;
 import com.keves.dreamreach.dto.ConstructionTaskResponse;
 import com.keves.dreamreach.dto.PlayerProfileResponse;
 import com.keves.dreamreach.dto.TrainingTaskResponse;
@@ -119,6 +120,25 @@ public class PlayerController {
                         .trainTimeSeconds(economyConfig.getTrainTimeBakerSeconds()).build()
         );
 
+        List<BuildingConfigResponse> buildingConfigs = List.of(
+                BuildingConfigResponse.builder().buildingType("house")
+                        .woodCost(economyConfig.getCostHouseWood())
+                        .stoneCost(economyConfig.getCostHouseStone())
+                        .buildTimeSeconds(economyConfig.getBuildTimeHouse()).build(),
+                BuildingConfigResponse.builder().buildingType("bakery")
+                        .woodCost(economyConfig.getCostBakeryWood())
+                        .stoneCost(economyConfig.getCostBakeryStone())
+                        .buildTimeSeconds(economyConfig.getBuildTimeBakery()).build(),
+                BuildingConfigResponse.builder().buildingType("lodge")
+                        .woodCost(economyConfig.getCostLodgeWood())
+                        .stoneCost(economyConfig.getCostLodgeStone())
+                        .buildTimeSeconds(economyConfig.getBuildTimeLodge()).build(),
+                BuildingConfigResponse.builder().buildingType("tower")
+                        .woodCost(economyConfig.getCostTowerWood())
+                        .stoneCost(economyConfig.getCostTowerStone())
+                        .buildTimeSeconds(economyConfig.getBuildTimeTower()).build()
+        );
+
         PlayerProfileResponse response = PlayerProfileResponse.builder()
                 .email(account.getEmail())
                 .displayName(account.getProfile().getDisplayName())
@@ -156,6 +176,7 @@ public class PlayerController {
                 .activeConstructions(activeTasks)
                 .activeTrainingTasks(activeTrainingTasks)
                 .trainingConfigs(trainingConfigs) // Map it here
+                .buildingConfigs(buildingConfigs)
                 .build();
 
         return ResponseEntity.ok(response);
@@ -233,6 +254,34 @@ public class PlayerController {
             trainingService.completeTraining(account.getProfile(), taskId);
             return ResponseEntity.ok().build();
         } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // --- NEW TAX ENDPOINTS ---
+
+    @PostMapping("/taxes/bracket")
+    public ResponseEntity<?> setTaxBracket(Authentication authentication, @RequestParam String bracket) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+
+        try {
+            economyService.setTaxBracket(account.getProfile(), bracket);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/taxes/collect")
+    public ResponseEntity<?> collectTaxes(Authentication authentication) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+
+        try {
+            economyService.collectTaxes(account.getProfile());
+            return ResponseEntity.ok().build();
+        } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
