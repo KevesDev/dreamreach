@@ -3,15 +3,18 @@ package com.keves.dreamreach.controller;
 import com.keves.dreamreach.config.GameEconomyConfig;
 import com.keves.dreamreach.dto.ConstructionTaskResponse;
 import com.keves.dreamreach.dto.PlayerProfileResponse;
+import com.keves.dreamreach.dto.TrainingTaskResponse;
 import com.keves.dreamreach.entity.PlayerAccount;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.entity.PlayerPopulation;
 import com.keves.dreamreach.exception.ResourceNotFoundException;
 import com.keves.dreamreach.repository.ConstructionTaskRepository;
 import com.keves.dreamreach.repository.PlayerAccountRepository;
+import com.keves.dreamreach.repository.TrainingTaskRepository;
 import com.keves.dreamreach.service.ConstructionService;
 import com.keves.dreamreach.service.EconomyService;
 import com.keves.dreamreach.service.RewardService;
+import com.keves.dreamreach.service.TrainingService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.http.ResponseEntity;
@@ -33,19 +36,25 @@ public class PlayerController {
     private final EconomyService economyService;
     private final ConstructionService constructionService;
     private final ConstructionTaskRepository constructionTaskRepository;
+    private final TrainingService trainingService;
+    private final TrainingTaskRepository trainingTaskRepository;
 
     public PlayerController(PlayerAccountRepository accountRepository,
                             GameEconomyConfig economyConfig,
                             RewardService rewardService,
                             EconomyService economyService,
                             ConstructionService constructionService,
-                            ConstructionTaskRepository constructionTaskRepository) {
+                            ConstructionTaskRepository constructionTaskRepository,
+                            TrainingService trainingService,
+                            TrainingTaskRepository trainingTaskRepository) {
         this.accountRepository = accountRepository;
         this.economyConfig = economyConfig;
         this.rewardService = rewardService;
         this.economyService = economyService;
         this.constructionService = constructionService;
         this.constructionTaskRepository = constructionTaskRepository;
+        this.trainingService = trainingService;
+        this.trainingTaskRepository = trainingTaskRepository;
     }
 
     @GetMapping("/me")
@@ -61,7 +70,6 @@ public class PlayerController {
 
         PlayerPopulation pop = profile.getPopulation();
 
-        // Calculate max pop dynamically based on physical instances
         int houseCount = (int) profile.getBuildings().stream()
                 .filter(b -> b.getBuildingType().equalsIgnoreCase("house")).count();
         int calculatedMaxPop = houseCount * economyConfig.getCapacityPerHouse();
@@ -75,6 +83,17 @@ public class PlayerController {
                 .map(task -> ConstructionTaskResponse.builder()
                         .buildingType(task.getBuildingType())
                         .targetLevel(task.getTargetLevel())
+                        .startTimeEpoch(task.getStartTime().toEpochMilli())
+                        .completionTimeEpoch(task.getCompletionTime().toEpochMilli())
+                        .build())
+                .collect(Collectors.toList());
+
+        // Map the new Training Queue
+        List<TrainingTaskResponse> activeTrainingTasks = trainingTaskRepository.findByProfileIdOrderByStartTimeAsc(profile.getId())
+                .stream()
+                .map(task -> TrainingTaskResponse.builder()
+                        .id(task.getId().toString())
+                        .professionType(task.getProfessionType())
                         .startTimeEpoch(task.getStartTime().toEpochMilli())
                         .completionTimeEpoch(task.getCompletionTime().toEpochMilli())
                         .build())
@@ -102,7 +121,9 @@ public class PlayerController {
                 .totalPopulation(profile.getPopulation() != null ? profile.getPopulation().getTotalPopulation() : 0)
                 .maxPopulation(calculatedMaxPop)
 
-                // Translating Instances back into UI Integers for frontend stability
+                .idlePeasants(pop != null ? pop.getIdlePeasants() : 0)
+                .bakers(pop != null ? pop.getBakers() : 0)
+
                 .keepLevel(1)
                 .houses(houseCount)
                 .towers((int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("tower")).count())
@@ -110,6 +131,7 @@ public class PlayerController {
                 .huntingLodges((int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("lodge")).count())
 
                 .activeConstructions(activeTasks)
+                .activeTrainingTasks(activeTrainingTasks)
                 .build();
 
         return ResponseEntity.ok(response);
@@ -157,6 +179,36 @@ public class PlayerController {
 
         try {
             constructionService.completeConstruction(account.getProfile(), buildingType);
+            return ResponseEntity.ok().build();
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // --- NEW CITIZEN MANAGEMENT ENDPOINTS ---
+
+    @PostMapping("/train")
+    public ResponseEntity<?> queueTraining(Authentication authentication,
+                                           @RequestParam String profession,
+                                           @RequestParam int quantity) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+
+        try {
+            trainingService.queueTraining(account.getProfile(), profession, quantity);
+            return ResponseEntity.ok().build();
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/train/complete")
+    public ResponseEntity<?> completeTraining(Authentication authentication, @RequestParam String taskId) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+
+        try {
+            trainingService.completeTraining(account.getProfile(), taskId);
             return ResponseEntity.ok().build();
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
