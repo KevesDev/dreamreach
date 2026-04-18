@@ -298,3 +298,33 @@
     cursor: not-allowed;
     box-shadow: none;
 }
+
+/* --- New Kingdom Tab Styles --- */
+.kingdom-tabs {
+    display: flex;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-strong);
+    padding: 0 var(--space-xl);
+}
+
+.kingdom-tab {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    padding: var(--space-md) var(--space-lg);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.kingdom-tab:hover {
+    color: var(--text-primary);
+    background: var(--surface-2);
+}
+
+.kingdom-tab.active {
+    color: var(--accent-gold);
+    border-bottom-color: var(--accent-gold);
+}

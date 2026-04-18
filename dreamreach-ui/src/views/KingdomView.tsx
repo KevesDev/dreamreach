@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api from '../api/client';
-import { Icon } from '../components/Icon';
 import BuildingSidePanel from '../components/BuildingSidePanel';
+import WorldLayer from '../components/WorldLayer';
+import RoyalLedger from '../components/RoyalLedger';
 import './KingdomView.css';
 
 export interface ConstructionTaskResponse {
@@ -12,10 +13,18 @@ export interface ConstructionTaskResponse {
     completionTimeEpoch: number;
 }
 
+export interface TrainingTaskResponse {
+    id: string;
+    professionType: string;
+    startTimeEpoch: number;
+    completionTimeEpoch: number;
+}
+
 export interface PlayerProfile {
     displayName: string;
     totalPopulation: number;
     maxPopulation: number;
+    idlePeasants: number;
     woodcutters: number;
     stoneworkers: number;
     hunters: number;
@@ -33,6 +42,7 @@ export interface PlayerProfile {
     huntingLodges: number;
 
     activeConstructions?: ConstructionTaskResponse[];
+    activeTrainingTasks?: TrainingTaskResponse[];
 }
 
 export interface BuildingCost {
@@ -69,6 +79,10 @@ export interface KingdomEvent {
 export default function KingdomView() {
     const { profile, fetchProfile } = useOutletContext<{ profile: PlayerProfile, fetchProfile: () => void }>();
 
+    // Top-level navigation state
+    const [activeTab, setActiveTab] = useState<'buildings' | 'citizens'>('buildings');
+
+    // Building management state
     const [selectedGroup, setSelectedGroup] = useState<BuildingGroup | null>(null);
     const [selectedInstance, setSelectedInstance] = useState<BuildingInstance | null>(null);
     const [isBusy, setIsBusy] = useState(false);
@@ -79,6 +93,16 @@ export default function KingdomView() {
         const timer = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // Handle tab switching safely
+    const handleTabChange = (tab: 'buildings' | 'citizens') => {
+        setActiveTab(tab);
+        if (tab === 'citizens') {
+            // Close the building panel immediately when switching to Citizens
+            setSelectedGroup(null);
+            setSelectedInstance(null);
+        }
+    };
 
     const buildingGroups: BuildingGroup[] = [
         {
@@ -157,50 +181,48 @@ export default function KingdomView() {
     return (
         <div className="kingdom-container">
             <div className="kingdom-main">
-                <div className="world-layer">
-                    {buildingGroups.map((group) => {
-                        const task = profile?.activeConstructions?.find(t => t.buildingType === group.type);
-                        const isReady = task && now >= task.completionTimeEpoch;
-
-                        return (
-                            <div
-                                key={group.type}
-                                className={`map-node ${selectedGroup?.type === group.type ? 'active' : ''} ${isReady ? 'ready' : ''}`}
-                                onClick={() => {
-                                    setSelectedGroup(group);
-                                    setSelectedInstance(null);
-                                }}
-                            >
-                                {group.instances.length > 0 && (
-                                    <div className="node-badge">{group.instances.length}</div>
-                                )}
-                                <div className="node-icon-wrapper">
-                                    <Icon name={group.icon} size={32} />
-                                </div>
-                                <div className="node-label">{group.name}</div>
-                            </div>
-                        );
-                    })}
+                {/* Master Tab Navigation */}
+                <div className="kingdom-tabs">
+                    <button
+                        className={`kingdom-tab ${activeTab === 'buildings' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('buildings')}
+                    >
+                        Structures
+                    </button>
+                    <button
+                        className={`kingdom-tab ${activeTab === 'citizens' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('citizens')}
+                    >
+                        Citizens
+                    </button>
                 </div>
 
-                <div className="journal-container">
-                    <div className="journal-header">
-                        <h2>Royal Ledger</h2>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Latest Events</span>
+                {/* Sub-Views */}
+                {activeTab === 'buildings' ? (
+                    <>
+                        <WorldLayer
+                            buildingGroups={buildingGroups}
+                            selectedGroup={selectedGroup}
+                            activeConstructions={profile?.activeConstructions}
+                            now={now}
+                            onSelectGroup={(group) => {
+                                setSelectedGroup(group);
+                                setSelectedInstance(null);
+                            }}
+                        />
+                        <RoyalLedger events={events} />
+                    </>
+                ) : (
+                    <div className="panel" style={{ margin: 'var(--space-xl)', flex: 1 }}>
+                        <h2 style={{ color: 'var(--accent-gold)' }}>Citizen Management</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
+                            (Training Dashboard Coming Soon)
+                        </p>
                     </div>
-
-                    <div className="journal-log">
-                        {events.map(event => (
-                            <div key={event.id} className={`journal-entry journal-entry--${event.type}`}>
-                                <span className="journal-time">[{event.timestamp}]</span>
-                                <span className="journal-text">{event.message}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                )}
             </div>
 
-            {selectedGroup && (
+            {selectedGroup && activeTab === 'buildings' && (
                 <BuildingSidePanel
                     selectedGroup={selectedGroup}
                     selectedInstance={selectedInstance}
