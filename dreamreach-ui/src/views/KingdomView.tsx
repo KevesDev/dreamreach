@@ -37,6 +37,7 @@ export interface BuildingConfigResponse {
     buildTimeSeconds: number;
     maxWorkers: number;
     productionRate: number;
+    unlockKeepLevel: number;
 }
 
 export interface BuildingInstance {
@@ -101,6 +102,7 @@ export interface BuildingGroup {
     cost?: BuildingCost;
     instances: BuildingInstance[];
     isActionReady?: boolean;
+    unlockKeepLevel: number; // Added to resolve TS2339
 }
 
 export interface KingdomEvent {
@@ -196,7 +198,8 @@ export default function KingdomView() {
             icon: 'kingdom',
             description: 'The central hub of your kingdom. Upgrading it unlocks new tiers of structures.',
             isActionReady: canCollectTaxes,
-            instances: mapInstances('keep', null)
+            instances: mapInstances('keep', null),
+            unlockKeepLevel: 1 // Default fallback for Keep
         },
         {
             type: 'house',
@@ -205,7 +208,8 @@ export default function KingdomView() {
             icon: 'home',
             description: 'Provides housing for your peasant population.',
             cost: houseConfig ? { wood: houseConfig.woodCost, stone: houseConfig.stoneCost, timeSeconds: houseConfig.buildTimeSeconds } : undefined,
-            instances: mapInstances('house', houseConfig)
+            instances: mapInstances('house', houseConfig),
+            unlockKeepLevel: houseConfig?.unlockKeepLevel || 1
         },
         {
             type: 'bakery',
@@ -214,7 +218,8 @@ export default function KingdomView() {
             icon: 'food',
             description: 'Assigned peasants bake bread to slowly generate food.',
             cost: bakeryConfig ? { wood: bakeryConfig.woodCost, stone: bakeryConfig.stoneCost, timeSeconds: bakeryConfig.buildTimeSeconds } : undefined,
-            instances: mapInstances('bakery', bakeryConfig)
+            instances: mapInstances('bakery', bakeryConfig),
+            unlockKeepLevel: bakeryConfig?.unlockKeepLevel || 1
         },
         {
             type: 'lodge',
@@ -223,7 +228,8 @@ export default function KingdomView() {
             icon: 'combat',
             description: 'Hunters yield a faster, riskier food supply.',
             cost: lodgeConfig ? { wood: lodgeConfig.woodCost, stone: lodgeConfig.stoneCost, timeSeconds: lodgeConfig.buildTimeSeconds } : undefined,
-            instances: mapInstances('lodge', lodgeConfig)
+            instances: mapInstances('lodge', lodgeConfig),
+            unlockKeepLevel: lodgeConfig?.unlockKeepLevel || 1
         },
         {
             type: 'tavern',
@@ -233,7 +239,8 @@ export default function KingdomView() {
             description: 'Attracts wandering adventurers who can be recruited into your party.',
             cost: tavernConfig ? { wood: tavernConfig.woodCost, stone: tavernConfig.stoneCost, timeSeconds: tavernConfig.buildTimeSeconds } : undefined,
             instances: mapInstances('tavern', tavernConfig),
-            isActionReady: tavernListing != null // Show a notification dot if a hero is waiting!
+            isActionReady: tavernListing != null, // Show a notification dot if a hero is waiting!
+            unlockKeepLevel: tavernConfig?.unlockKeepLevel || 5
         }
     ];
 
