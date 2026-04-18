@@ -4,6 +4,7 @@ import com.keves.dreamreach.config.GameEconomyConfig;
 import com.keves.dreamreach.dto.ConstructionTaskResponse;
 import com.keves.dreamreach.dto.PlayerProfileResponse;
 import com.keves.dreamreach.dto.TrainingTaskResponse;
+import com.keves.dreamreach.dto.TrainingConfigResponse;
 import com.keves.dreamreach.entity.PlayerAccount;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.entity.PlayerPopulation;
@@ -88,7 +89,6 @@ public class PlayerController {
                         .build())
                 .collect(Collectors.toList());
 
-        // Map the new Training Queue
         List<TrainingTaskResponse> activeTrainingTasks = trainingTaskRepository.findByProfileIdOrderByStartTimeAsc(profile.getId())
                 .stream()
                 .map(task -> TrainingTaskResponse.builder()
@@ -98,6 +98,26 @@ public class PlayerController {
                         .completionTimeEpoch(task.getCompletionTime().toEpochMilli())
                         .build())
                 .collect(Collectors.toList());
+
+        // Extract backend config dynamically for the frontend dashboard
+        List<TrainingConfigResponse> trainingConfigs = List.of(
+                TrainingConfigResponse.builder().professionType("woodcutter")
+                        .goldCost(economyConfig.getCostTrainWoodcutterGold())
+                        .foodCost(economyConfig.getCostTrainWoodcutterFood())
+                        .trainTimeSeconds(economyConfig.getTrainTimeWoodcutterSeconds()).build(),
+                TrainingConfigResponse.builder().professionType("stoneworker")
+                        .goldCost(economyConfig.getCostTrainStoneworkerGold())
+                        .foodCost(economyConfig.getCostTrainStoneworkerFood())
+                        .trainTimeSeconds(economyConfig.getTrainTimeStoneworkerSeconds()).build(),
+                TrainingConfigResponse.builder().professionType("hunter")
+                        .goldCost(economyConfig.getCostTrainHunterGold())
+                        .foodCost(economyConfig.getCostTrainHunterFood())
+                        .trainTimeSeconds(economyConfig.getTrainTimeHunterSeconds()).build(),
+                TrainingConfigResponse.builder().professionType("baker")
+                        .goldCost(economyConfig.getCostTrainBakerGold())
+                        .foodCost(economyConfig.getCostTrainBakerFood())
+                        .trainTimeSeconds(economyConfig.getTrainTimeBakerSeconds()).build()
+        );
 
         PlayerProfileResponse response = PlayerProfileResponse.builder()
                 .email(account.getEmail())
@@ -122,6 +142,9 @@ public class PlayerController {
                 .maxPopulation(calculatedMaxPop)
 
                 .idlePeasants(pop != null ? pop.getIdlePeasants() : 0)
+                .woodcutters(pop != null ? pop.getWoodcutters() : 0)
+                .stoneworkers(pop != null ? pop.getStoneworkers() : 0)
+                .hunters(pop != null ? pop.getHunters() : 0)
                 .bakers(pop != null ? pop.getBakers() : 0)
 
                 .keepLevel(1)
@@ -132,6 +155,7 @@ public class PlayerController {
 
                 .activeConstructions(activeTasks)
                 .activeTrainingTasks(activeTrainingTasks)
+                .trainingConfigs(trainingConfigs) // Map it here
                 .build();
 
         return ResponseEntity.ok(response);
@@ -184,8 +208,6 @@ public class PlayerController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
-    // --- NEW CITIZEN MANAGEMENT ENDPOINTS ---
 
     @PostMapping("/train")
     public ResponseEntity<?> queueTraining(Authentication authentication,

@@ -4,6 +4,7 @@ import api from '../api/client';
 import BuildingSidePanel from '../components/BuildingSidePanel';
 import WorldLayer from '../components/WorldLayer';
 import RoyalLedger from '../components/RoyalLedger';
+import CitizenDashboard from '../components/CitizenDashboard';
 import './KingdomView.css';
 
 export interface ConstructionTaskResponse {
@@ -18,6 +19,20 @@ export interface TrainingTaskResponse {
     professionType: string;
     startTimeEpoch: number;
     completionTimeEpoch: number;
+}
+
+export interface TrainingConfigResponse {
+    professionType: string;
+    goldCost: number;
+    foodCost: number;
+    trainTimeSeconds: number;
+}
+
+export interface BuildingConfigResponse {
+    buildingType: string;
+    woodCost: number;
+    stoneCost: number;
+    buildTimeSeconds: number;
 }
 
 export interface PlayerProfile {
@@ -43,6 +58,8 @@ export interface PlayerProfile {
 
     activeConstructions?: ConstructionTaskResponse[];
     activeTrainingTasks?: TrainingTaskResponse[];
+    trainingConfigs?: TrainingConfigResponse[];
+    buildingConfigs?: BuildingConfigResponse[]; // Receive dynamic costs from backend
 }
 
 export interface BuildingCost {
@@ -104,6 +121,14 @@ export default function KingdomView() {
         }
     };
 
+    // Helper to dynamically locate backend config values
+    const getBuildingConfig = (type: string) => profile?.buildingConfigs?.find(c => c.buildingType === type);
+
+    // Grab the dynamic configs (fallback to null if loading)
+    const houseConfig = getBuildingConfig('house');
+    const bakeryConfig = getBuildingConfig('bakery');
+    const lodgeConfig = getBuildingConfig('lodge');
+
     const buildingGroups: BuildingGroup[] = [
         {
             type: 'keep',
@@ -119,7 +144,11 @@ export default function KingdomView() {
             singularName: 'House',
             icon: 'home',
             description: 'Provides housing for your peasant population. More houses mean a higher population cap.',
-            cost: { wood: 50, stone: 10, timeSeconds: 60 },
+            cost: houseConfig ? {
+                wood: houseConfig.woodCost,
+                stone: houseConfig.stoneCost,
+                timeSeconds: houseConfig.buildTimeSeconds
+            } : undefined,
             instances: Array.from({ length: profile?.houses || 0 }).map((_, i) => ({
                 id: `house-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 0, productionRate: 0
             }))
@@ -130,7 +159,11 @@ export default function KingdomView() {
             singularName: 'Bakery',
             icon: 'food',
             description: 'Specialized structures where assigned peasants bake bread to slowly generate food.',
-            cost: { wood: 100, stone: 50, timeSeconds: 300 },
+            cost: bakeryConfig ? {
+                wood: bakeryConfig.woodCost,
+                stone: bakeryConfig.stoneCost,
+                timeSeconds: bakeryConfig.buildTimeSeconds
+            } : undefined,
             instances: Array.from({ length: profile?.bakeries || 0 }).map((_, i) => ({
                 id: `bakery-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 2, productionRate: 10
             }))
@@ -141,7 +174,11 @@ export default function KingdomView() {
             singularName: 'Hunting Lodge',
             icon: 'combat',
             description: 'Hunters stationed here yield a faster, riskier food supply for the kingdom.',
-            cost: { wood: 120, stone: 30, timeSeconds: 300 },
+            cost: lodgeConfig ? {
+                wood: lodgeConfig.woodCost,
+                stone: lodgeConfig.stoneCost,
+                timeSeconds: lodgeConfig.buildTimeSeconds
+            } : undefined,
             instances: Array.from({ length: profile?.huntingLodges || 0 }).map((_, i) => ({
                 id: `lodge-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 2, productionRate: 0
             }))
@@ -213,12 +250,11 @@ export default function KingdomView() {
                         <RoyalLedger events={events} />
                     </>
                 ) : (
-                    <div className="panel" style={{ margin: 'var(--space-xl)', flex: 1 }}>
-                        <h2 style={{ color: 'var(--accent-gold)' }}>Citizen Management</h2>
-                        <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
-                            (Training Dashboard Coming Soon)
-                        </p>
-                    </div>
+                    <CitizenDashboard
+                        profile={profile}
+                        now={now}
+                        fetchProfile={fetchProfile}
+                    />
                 )}
             </div>
 

@@ -1,0 +1,160 @@
+.citizen-dashboard {
+    flex: 1;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border-strong);
+    padding: var(--space-xl);
+    overflow-y: auto;
+    box-shadow: inset 0 10px 20px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+}
+
+.roster-header {
+    display: flex;
+    gap: var(--space-lg);
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: var(--space-xl);
+}
+
+.roster-stat-card {
+    flex: 1;
+    background: var(--surface-1);
+    padding: var(--space-md);
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.roster-stat-card h4 {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.roster-stat-value {
+    font-size: 1.8rem;
+    font-family: var(--font-heading);
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.roster-stat-max {
+    font-size: 1rem;
+    color: var(--text-muted);
+}
+
+.idle-color { color: var(--text-secondary); }
+.trained-color { color: var(--accent-gold); }
+
+.profession-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.profession-row {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: var(--space-md) var(--space-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.profession-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-top: 8px; /* Aligns with the controls block */
+}
+
+.profession-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--accent-gold);
+    border: 1px solid var(--border-strong);
+}
+
+.profession-name {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.profession-count {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: normal;
+}
+
+.profession-controls-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 400px; /* Fixed width to keep controls aligned */
+}
+
+.profession-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-md);
+}
+
+.training-cost {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.quantity-selector {
+    display: flex;
+    align-items: center;
+    background: var(--bg-main);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.quantity-selector button {
+    background: var(--surface-2);
+    border: none;
+    color: var(--text-primary);
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.quantity-selector button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.quantity-selector button:hover:not(:disabled) {
+    background: var(--surface-1);
+}
+
+.quantity-selector span {
+    width: 40px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.training-queue-block {
+    background: var(--surface-2);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+}
