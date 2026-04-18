@@ -50,6 +50,11 @@ export default function BuildingSidePanel({
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
+    // Determine if the player can afford this building
+    const canAfford = selectedGroup.cost
+        ? (profile?.wood >= selectedGroup.cost.wood && profile?.stone >= selectedGroup.cost.stone)
+        : true;
+
     return (
         <aside className="side-panel">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -139,14 +144,31 @@ export default function BuildingSidePanel({
                                     )}
                                 </div>
                             ) : (
-                                <button
-                                    className="button"
-                                    style={{ marginTop: 'var(--space-sm)' }}
-                                    onClick={() => onConstruct(selectedGroup.type)}
-                                    disabled={isBusy}
-                                >
-                                    + Construct New
-                                </button>
+                                <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-sm)', padding: '12px', borderRadius: '8px' }}>
+                                    {selectedGroup.cost && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--border-subtle)' }}>
+                                            <span>
+                                                Cost: <span style={{ color: canAfford ? 'var(--accent-gold)' : 'var(--danger)' }}>
+                                                    {selectedGroup.cost.wood} Wood, {selectedGroup.cost.stone} Stone
+                                                </span>
+                                            </span>
+                                            <span>⏱ {Math.floor(selectedGroup.cost.timeSeconds / 60)}m {selectedGroup.cost.timeSeconds % 60 > 0 ? `${selectedGroup.cost.timeSeconds % 60}s` : ''}</span>
+                                        </div>
+                                    )}
+                                    <button
+                                        className="button"
+                                        style={{ width: '100%' }}
+                                        onClick={() => onConstruct(selectedGroup.type)}
+                                        disabled={isBusy || !canAfford}
+                                    >
+                                        + Construct New
+                                    </button>
+                                    {!canAfford && (
+                                        <p style={{ fontSize: '0.7rem', color: 'var(--danger)', textAlign: 'center', marginTop: '8px' }}>
+                                            Not enough resources
+                                        </p>
+                                    )}
+                                </div>
                             )
                         )}
                     </div>
@@ -187,7 +209,7 @@ export default function BuildingSidePanel({
                         </button>
                         <p style={{ fontSize: '0.7rem', textAlign: 'center', marginTop: 'var(--space-sm)', color: 'var(--text-muted)' }}>
                             {selectedGroup.type === 'keep'
-                                ? 'Upgrade requirements Not Met'
+                                ? 'Upgrade requirements TBD'
                                 : `Requires Keep Lvl ${selectedInstance.level + 1}`}
                         </p>
                     </div>
