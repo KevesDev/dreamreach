@@ -99,17 +99,19 @@ public class AuthService {
         population.setHunters(0);
         population.setWoodcutters(0);
         population.setStoneworkers(0);
+        population.setBakers(0);
         population.setProfile(profile);
         profile.setPopulation(population);
 
-        // Provision the Settlement (Starting Architecture)
-        PlayerStructures structures = new PlayerStructures();
-        structures.setHouses(economyConfig.getStartingHouses());
-        structures.setTowers(economyConfig.getStartingTowers());
-        structures.setBakeries(economyConfig.getStartingBakeries());
-        structures.setHuntingLodges(economyConfig.getStartingLodges());
-        structures.setProfile(profile);
-        profile.setStructures(structures);
+        // Provision the Settlement (Physical Architecture Instantiation)
+        for (int i = 0; i < economyConfig.getStartingHouses(); i++) {
+            BuildingInstance house = new BuildingInstance();
+            house.setBuildingType("house");
+            house.setLevel(1);
+            house.setAssignedWorkers(0);
+            house.setProfile(profile);
+            profile.getBuildings().add(house);
+        }
 
         // save the new account to the database. Since we are using Cascade
         // between the profile and account, the profile will also automatically be saved.

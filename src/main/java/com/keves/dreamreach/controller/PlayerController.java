@@ -61,15 +61,15 @@ public class PlayerController {
 
         PlayerPopulation pop = profile.getPopulation();
 
-        int calculatedMaxPop = (profile.getStructures() != null)
-                ? (profile.getStructures().getHouses() * economyConfig.getCapacityPerHouse())
-                : 0;
+        // Calculate max pop dynamically based on physical instances
+        int houseCount = (int) profile.getBuildings().stream()
+                .filter(b -> b.getBuildingType().equalsIgnoreCase("house")).count();
+        int calculatedMaxPop = houseCount * economyConfig.getCapacityPerHouse();
 
         int foodRate = economyService.calculateFoodRate(profile);
         int woodRate = (pop != null ? pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter() : 0) + economyConfig.getBasePassiveWood();
         int stoneRate = (pop != null ? pop.getStoneworkers() * economyConfig.getStonePerStoneworker() : 0) + economyConfig.getBasePassiveStone();
 
-        // SAFELY MAP TASKS: Uses the new findByProfileId repository method
         List<ConstructionTaskResponse> activeTasks = constructionTaskRepository.findByProfileId(profile.getId())
                 .stream()
                 .map(task -> ConstructionTaskResponse.builder()
@@ -102,7 +102,13 @@ public class PlayerController {
                 .totalPopulation(profile.getPopulation() != null ? profile.getPopulation().getTotalPopulation() : 0)
                 .maxPopulation(calculatedMaxPop)
 
-                // Ensure PlayerProfileResponse.java has: private List<ConstructionTaskResponse> activeConstructions;
+                // Translating Instances back into UI Integers for frontend stability
+                .keepLevel(1)
+                .houses(houseCount)
+                .towers((int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("tower")).count())
+                .bakeries((int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("bakery")).count())
+                .huntingLodges((int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("lodge")).count())
+
                 .activeConstructions(activeTasks)
                 .build();
 
