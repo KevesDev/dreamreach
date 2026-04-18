@@ -7,8 +7,8 @@ import KingdomView from './views/KingdomView';
 import HeroesView from './views/HeroesView';
 import Layout from './components/Layout';
 
-// Placeholder component
-const SummonPlaceholder = () => <div className="panel"><h2>Summoning Portal (Under Construction)</h2></div>;
+// Placeholder component for the Shop
+const ShopPlaceholder = () => <div className="panel"><h2>Grand Bazaar (Under Construction)</h2></div>;
 
 export default function App() {
     return (
@@ -22,7 +22,7 @@ export default function App() {
                     <Route path="/dashboard" element={<DashboardView />} />
                     <Route path="/kingdom" element={<KingdomView />} />
                     <Route path="/heroes" element={<HeroesView />} />
-                    <Route path="/summon" element={<SummonPlaceholder />} />
+                    <Route path="/shop" element={<ShopPlaceholder />} />
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 </Route>
 
