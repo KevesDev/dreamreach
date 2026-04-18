@@ -28,6 +28,9 @@ public class GameEconomyConfig {
     private int startingBakeries = 0;
     private int startingLodges = 0;
 
+    // --- RESOURCE STORAGE ---
+    private int baseStoragePerKeepLevel = 500;
+
     // --- PASSIVE BASELINE ---
     private int basePassiveWood = 30;
     private int basePassiveStone = 30;
