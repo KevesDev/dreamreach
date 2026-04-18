@@ -3,7 +3,8 @@ import api from '../api/client';
 import { Icon } from '../components/Icon';
 import './HeroesView.css';
 
-interface Character {
+// Export added here to resolve TS2614
+export interface Character {
     characterId: string;
     name: string;
     rarity: string;
@@ -172,7 +173,7 @@ export default function HeroesView() {
                     <div className="sheet-empty-state">
                         <Icon name="user" size={48} />
                         <h2>Select a Hero</h2>
-                        <p>Select a hero to view their details.</p>
+                        <p>Click a hero from your roster list to view their detailed D&D character sheet.</p>
                     </div>
                 )}
             </main>

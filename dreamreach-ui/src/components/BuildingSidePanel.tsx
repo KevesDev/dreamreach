@@ -73,6 +73,14 @@ export default function BuildingSidePanel({
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
+    const formatTimeRemainingTaxes = (end: number, current: number) => {
+        if (current >= end) return "Ready!";
+        const diffSeconds = Math.ceil((end - current) / 1000);
+        const m = Math.floor(diffSeconds / 60);
+        const s = diffSeconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
     const handleTaxChange = async (bracket: string) => {
         if (isBusy) return;
         try {
@@ -117,11 +125,10 @@ export default function BuildingSidePanel({
         ? (profile?.wood >= selectedGroup.cost.wood && profile?.stone >= selectedGroup.cost.stone)
         : true;
 
-    const maxHap = profile?.maxHappiness || 100;
-    const hapHigh = maxHap * 0.75;
-    const hapLow = maxHap * 0.25;
+    // Strict profile values rather than fallbacks to maintain consistency with GameEconomyConfig
+    const hapHigh = profile.maxHappiness * 0.75;
+    const hapLow = profile.maxHappiness * 0.25;
 
-    // --- TAVERN SPECIFIC UI ---
     const renderTavernInterior = () => {
         if (!tavernListing) {
             return (
@@ -199,19 +206,19 @@ export default function BuildingSidePanel({
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
                                     <span>Kingdom Happiness</span>
-                                    <span style={{ color: profile?.happiness >= hapHigh ? 'var(--success)' : profile?.happiness <= hapLow ? 'var(--danger)' : 'var(--text-primary)', fontWeight: 'bold' }}>
-                                        {profile?.happiness || 50} / {maxHap}
+                                    <span style={{ color: profile.happiness >= hapHigh ? 'var(--success)' : profile.happiness <= hapLow ? 'var(--danger)' : 'var(--text-primary)', fontWeight: 'bold' }}>
+                                        {profile.happiness} / {profile.maxHappiness}
                                     </span>
                                 </div>
                                 <div className="progress-bar-container">
-                                    <div className="progress-bar-fill" style={{ width: `${((profile?.happiness || 50) / maxHap) * 100}%`, background: profile?.happiness >= hapHigh ? 'var(--success)' : profile?.happiness <= hapLow ? 'var(--danger)' : 'var(--accent-blue)', transition: 'width 0.5s ease-out' }}></div>
+                                    <div className="progress-bar-fill" style={{ width: `${(profile.happiness / profile.maxHappiness) * 100}%`, background: profile.happiness >= hapHigh ? 'var(--success)' : profile.happiness <= hapLow ? 'var(--danger)' : 'var(--accent-blue)', transition: 'width 0.5s ease-out' }}></div>
                                 </div>
 
                                 <div style={{ marginTop: '8px' }}>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Tax Policy:</div>
                                     <div style={{ display: 'flex', gap: '4px' }}>
                                         {['LOW', 'NORMAL', 'HIGH'].map(bracket => (
-                                            <button key={bracket} style={{ flex: 1, padding: '6px 0', background: profile?.taxBracket === bracket ? 'var(--surface-2)' : 'transparent', border: `1px solid ${profile?.taxBracket === bracket ? 'var(--accent-gold)' : 'var(--border-subtle)'}`, color: profile?.taxBracket === bracket ? 'var(--accent-gold)' : 'var(--text-muted)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s' }} onClick={() => handleTaxChange(bracket)} disabled={isBusy}>{bracket}</button>
+                                            <button key={bracket} style={{ flex: 1, padding: '6px 0', background: profile.taxBracket === bracket ? 'var(--surface-2)' : 'transparent', border: `1px solid ${profile.taxBracket === bracket ? 'var(--accent-gold)' : 'var(--border-subtle)'}`, color: profile.taxBracket === bracket ? 'var(--accent-gold)' : 'var(--text-muted)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s' }} onClick={() => handleTaxChange(bracket)} disabled={isBusy}>{bracket}</button>
                                         ))}
                                     </div>
                                 </div>
@@ -219,10 +226,10 @@ export default function BuildingSidePanel({
                                 <div style={{ background: 'var(--surface-1)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginTop: '8px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                         <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Pending Vault:</span>
-                                        <span style={{ color: 'var(--accent-gold)', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', fontWeight: 'bold' }}>{profile?.pendingGold || 0} G</span>
+                                        <span style={{ color: 'var(--accent-gold)', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', fontWeight: 'bold' }}>{profile.pendingGold} G</span>
                                     </div>
-                                    <button className="button button--claim" style={{ width: '100%' }} onClick={handleCollectTaxes} disabled={isBusy || (now - (profile?.lastTaxCollectionTimeEpoch || 0)) < 3600000}>
-                                        { (now - (profile?.lastTaxCollectionTimeEpoch || 0)) >= 3600000 ? 'Collect Taxes' : `Wait ${formatTimeRemainingTaxes((profile?.lastTaxCollectionTimeEpoch || 0) + 3600000, now)}` }
+                                    <button className="button button--claim" style={{ width: '100%' }} onClick={handleCollectTaxes} disabled={isBusy || (now - profile.lastTaxCollectionTimeEpoch) < 3600000}>
+                                        { (now - profile.lastTaxCollectionTimeEpoch) >= 3600000 ? 'Collect Taxes' : `Wait ${formatTimeRemainingTaxes(profile.lastTaxCollectionTimeEpoch + 3600000, now)}` }
                                     </button>
                                 </div>
                             </div>
@@ -234,7 +241,7 @@ export default function BuildingSidePanel({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span>Total Villagers:</span>
-                                <span>{profile?.totalPopulation || 0} / {profile?.maxPopulation || 0}</span>
+                                <span>{profile.totalPopulation} / {profile.maxPopulation}</span>
                             </div>
                             {getGlobalWorkerCount(selectedGroup.type) && (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-gold)' }}>
@@ -249,7 +256,6 @@ export default function BuildingSidePanel({
                         <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>YOUR STRUCTURES</h4>
                         {selectedGroup.instances.length === 0 && (<span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>You do not have any of these structures.</span>)}
 
-                        {/* Auto-select single instance buildings like the Tavern if they exist */}
                         {selectedGroup.instances.length === 1 && selectedGroup.type === 'tavern' ? (
                             <button className="button" style={{ width: '100%', padding: '12px' }} onClick={() => onSelectInstance(selectedGroup.instances[0])}>
                                 Enter the Tavern
@@ -286,8 +292,8 @@ export default function BuildingSidePanel({
                                                 <span>⏱ {Math.floor(selectedGroup.cost.timeSeconds / 60)}m {selectedGroup.cost.timeSeconds % 60 > 0 ? `${selectedGroup.cost.timeSeconds % 60}s` : ''}</span>
                                             </div>
                                         )}
-                                        {selectedGroup.type === 'tavern' && profile.keepLevel < 5 ? (
-                                            <p style={{ fontSize: '0.8rem', color: 'var(--danger)', textAlign: 'center', margin: 0 }}>Requires Keep Level 5</p>
+                                        {profile.keepLevel < selectedGroup.unlockKeepLevel ? (
+                                            <p style={{ fontSize: '0.8rem', color: 'var(--danger)', textAlign: 'center', margin: 0 }}>Requires Keep Lvl {selectedGroup.unlockKeepLevel}</p>
                                         ) : (
                                             <>
                                                 <button className="button" style={{ width: '100%' }} onClick={() => onConstruct(selectedGroup.type)} disabled={isBusy || !canAfford}>+ Construct New</button>
