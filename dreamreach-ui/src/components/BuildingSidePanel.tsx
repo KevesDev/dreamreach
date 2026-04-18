@@ -1,4 +1,5 @@
 import type { BuildingGroup, BuildingInstance, PlayerProfile, ConstructionTaskResponse } from '../views/KingdomView';
+import api from '../api/client';
 
 interface BuildingSidePanelProps {
     selectedGroup: BuildingGroup;
@@ -10,6 +11,7 @@ interface BuildingSidePanelProps {
     onSelectInstance: (instance: BuildingInstance | null) => void;
     onConstruct: (type: string) => void;
     onComplete: (type: string) => void;
+    fetchProfile: () => void;
 }
 
 export default function BuildingSidePanel({
@@ -21,7 +23,8 @@ export default function BuildingSidePanel({
                                               onClose,
                                               onSelectInstance,
                                               onConstruct,
-                                              onComplete
+                                              onComplete,
+                                              fetchProfile
                                           }: BuildingSidePanelProps) {
 
     const activeTask = profile?.activeConstructions?.find(
@@ -50,10 +53,43 @@ export default function BuildingSidePanel({
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
+    const formatTimeRemainingTaxes = (end: number, current: number) => {
+        if (current >= end) return "Ready!";
+        const diffSeconds = Math.ceil((end - current) / 1000);
+        const m = Math.floor(diffSeconds / 60);
+        const s = diffSeconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const handleTaxChange = async (bracket: string) => {
+        if (isBusy) return;
+        try {
+            await api.post(`/player/taxes/bracket?bracket=${bracket}`);
+            fetchProfile();
+        } catch (err: any) {
+            alert(err.response?.data || "Failed to update tax bracket.");
+        }
+    };
+
+    const handleCollectTaxes = async () => {
+        if (isBusy) return;
+        try {
+            await api.post('/player/taxes/collect');
+            fetchProfile();
+        } catch (err: any) {
+            alert(err.response?.data || "Failed to collect taxes.");
+        }
+    };
+
     // Determine if the player can afford this building
     const canAfford = selectedGroup.cost
         ? (profile?.wood >= selectedGroup.cost.wood && profile?.stone >= selectedGroup.cost.stone)
         : true;
+
+    // Dynamic happiness visual thresholds
+    const maxHap = profile?.maxHappiness || 100;
+    const hapHigh = maxHap * 0.75;
+    const hapLow = maxHap * 0.25;
 
     return (
         <aside className="side-panel">
@@ -79,6 +115,79 @@ export default function BuildingSidePanel({
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                         {selectedGroup.description}
                     </p>
+
+                    {selectedGroup.type === 'keep' && (
+                        <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
+                            <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-sm)', color: 'var(--text-muted)' }}>ROYAL TREASURY</h4>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+                                {/* Happiness Meter */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
+                                    <span>Kingdom Happiness</span>
+                                    <span style={{ color: profile?.happiness >= hapHigh ? 'var(--success)' : profile?.happiness <= hapLow ? 'var(--danger)' : 'var(--text-primary)', fontWeight: 'bold' }}>
+                                        {profile?.happiness || 50} / {maxHap}
+                                    </span>
+                                </div>
+                                <div className="progress-bar-container">
+                                    <div
+                                        className="progress-bar-fill"
+                                        style={{ width: `${((profile?.happiness || 50) / maxHap) * 100}%`, background: profile?.happiness >= hapHigh ? 'var(--success)' : profile?.happiness <= hapLow ? 'var(--danger)' : 'var(--accent-blue)', transition: 'width 0.5s ease-out' }}
+                                    ></div>
+                                </div>
+
+                                {/* Tax Policy */}
+                                <div style={{ marginTop: '8px' }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Tax Policy:</div>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        {['LOW', 'NORMAL', 'HIGH'].map(bracket => (
+                                            <button
+                                                key={bracket}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '6px 0',
+                                                    background: profile?.taxBracket === bracket ? 'var(--surface-2)' : 'transparent',
+                                                    border: `1px solid ${profile?.taxBracket === bracket ? 'var(--accent-gold)' : 'var(--border-subtle)'}`,
+                                                    color: profile?.taxBracket === bracket ? 'var(--accent-gold)' : 'var(--text-muted)',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.8rem',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                                onClick={() => handleTaxChange(bracket)}
+                                                disabled={isBusy}
+                                            >
+                                                {bracket}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Vault / Collection */}
+                                <div style={{ background: 'var(--surface-1)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginTop: '8px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                        <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Pending Vault:</span>
+                                        <span style={{ color: 'var(--accent-gold)', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', fontWeight: 'bold' }}>
+                                            {profile?.pendingGold || 0} G
+                                        </span>
+                                    </div>
+
+                                    <button
+                                        className="button button--claim"
+                                        style={{ width: '100%' }}
+                                        onClick={handleCollectTaxes}
+                                        disabled={isBusy || (now - (profile?.lastTaxCollectionTimeEpoch || 0)) < 3600000}
+                                    >
+                                        { (now - (profile?.lastTaxCollectionTimeEpoch || 0)) >= 3600000
+                                            ? 'Collect Taxes'
+                                            : `Wait ${formatTimeRemainingTaxes((profile?.lastTaxCollectionTimeEpoch || 0) + 3600000, now)}`
+                                        }
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    )}
 
                     <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
                         <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-sm)', color: 'var(--text-muted)' }}>KINGDOM LABOR</h4>
@@ -209,7 +318,7 @@ export default function BuildingSidePanel({
                         </button>
                         <p style={{ fontSize: '0.7rem', textAlign: 'center', marginTop: 'var(--space-sm)', color: 'var(--text-muted)' }}>
                             {selectedGroup.type === 'keep'
-                                ? 'Upgrade requirements TBD'
+                                ? 'Upgrade requirements Not Met'
                                 : `Requires Keep Lvl ${selectedInstance.level + 1}`}
                         </p>
                     </div>

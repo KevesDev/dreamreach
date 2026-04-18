@@ -16,4 +16,6 @@ public class BuildingConfigResponse {
     private int woodCost;
     private int stoneCost;
     private int buildTimeSeconds;
+    private int maxWorkers;
+    private int productionRate;
 }

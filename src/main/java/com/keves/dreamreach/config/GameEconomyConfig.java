@@ -66,6 +66,10 @@ public class GameEconomyConfig {
     private int stonePerStoneworker = 2;
     private int foodPerBakery = 15;
 
+    // --- BUILDING WORKER CAPACITIES ---
+    private int maxWorkersBakery = 2;
+    private int maxWorkersLodge = 2;
+
     // --- CONSTRUCTION BASE COSTS (Wood, Stone) ---
     // TODO: these might scale by level (e.g., cost * level^1.5)
     private int costHouseWood = 50;
