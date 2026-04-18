@@ -85,7 +85,6 @@ export default function HeroesView() {
 
                 {roster.length === 0 ? (
                     <div className="deck-empty-state">
-                        <Icon name="user" size={32} />
                         <p>No heroes recruited.</p>
                     </div>
                 ) : (

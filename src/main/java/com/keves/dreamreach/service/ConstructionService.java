@@ -64,6 +64,15 @@ public class ConstructionService {
                 costStone = config.getCostLodgeStone();
                 buildTimeSeconds = config.getBuildTimeLodge();
                 break;
+            case "tavern":
+                // Strict backend validation to prevent players from spoofing API calls to build multiple taverns
+                if (profile.getBuildings().stream().anyMatch(b -> b.getBuildingType().equalsIgnoreCase("tavern"))) {
+                    throw new IllegalStateException("You can only have one Tavern in your kingdom.");
+                }
+                costWood = config.getCostTavernWood();
+                costStone = config.getCostTavernStone();
+                buildTimeSeconds = config.getBuildTimeTavern();
+                break;
             default:
                 throw new IllegalArgumentException("Unknown building type: " + buildingType);
         }
