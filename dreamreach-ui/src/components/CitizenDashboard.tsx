@@ -20,11 +20,13 @@ export default function CitizenDashboard({ profile, now, fetchProfile }: Citizen
     // Dynamically retrieve the config sent by the backend
     const getConfig = (type: string) => profile?.trainingConfigs?.find(c => c.professionType === type);
 
+    // Added 'as const' to the icons so TypeScript strict-mode correctly infers them as explicit literals,
+    // and updated the woodcutter icon from 'tree' to 'wood' to match the Icon component props.
     const professions = [
-        { type: 'woodcutter', name: 'Woodcutter', icon: 'tree', count: profile?.woodcutters || 0, config: getConfig('woodcutter') },
-        { type: 'stoneworker', name: 'Stoneworker', icon: 'stone', count: profile?.stoneworkers || 0, config: getConfig('stoneworker') },
-        { type: 'hunter', name: 'Hunter', icon: 'combat', count: profile?.hunters || 0, config: getConfig('hunter') },
-        { type: 'baker', name: 'Baker', icon: 'food', count: profile?.bakers || 0, config: getConfig('baker') }
+        { type: 'woodcutter', name: 'Woodcutter', icon: 'wood' as const, count: profile?.woodcutters || 0, config: getConfig('woodcutter') },
+        { type: 'stoneworker', name: 'Stoneworker', icon: 'stone' as const, count: profile?.stoneworkers || 0, config: getConfig('stoneworker') },
+        { type: 'hunter', name: 'Hunter', icon: 'combat' as const, count: profile?.hunters || 0, config: getConfig('hunter') },
+        { type: 'baker', name: 'Baker', icon: 'food' as const, count: profile?.bakers || 0, config: getConfig('baker') }
     ];
 
     const trainedTotal = professions.reduce((sum, p) => sum + p.count, 0);
