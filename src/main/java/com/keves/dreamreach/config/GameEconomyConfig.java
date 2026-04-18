@@ -64,7 +64,7 @@ public class GameEconomyConfig {
     private int foodPerHunter = 5;
     private int woodPerWoodcutter = 3;
     private int stonePerStoneworker = 2;
-    private int foodPerBakery = 15;
+    private int foodPerBaker = 15;
 
     // --- BUILDING WORKER CAPACITIES ---
     private int maxWorkersBakery = 2;
