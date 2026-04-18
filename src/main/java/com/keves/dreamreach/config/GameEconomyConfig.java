@@ -61,7 +61,7 @@ public class GameEconomyConfig {
     private int foodConsumedPerPeasant = 2;
 
     // --- PRODUCTION RATES (Per Hour) ---
-    private int foodPerHunter = 5;
+    private int foodPerHunter = 8;
     private int woodPerWoodcutter = 3;
     private int stonePerStoneworker = 2;
     private int foodPerBaker = 15;
