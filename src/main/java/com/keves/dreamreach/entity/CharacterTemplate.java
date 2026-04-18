@@ -77,4 +77,11 @@ public class CharacterTemplate {
 
     @Column(name = "portrait_url")
     private String portraitUrl;
+
+    // --- TAVERN BASE COSTS ---
+    @Column(name = "base_gold_cost", nullable = false)
+    private int baseGoldCost = 500;
+
+    @Column(name = "base_gem_cost", nullable = false)
+    private int baseGemCost = 50;
 }

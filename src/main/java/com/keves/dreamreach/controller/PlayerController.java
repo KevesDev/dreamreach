@@ -12,6 +12,7 @@ import com.keves.dreamreach.repository.TrainingTaskRepository;
 import com.keves.dreamreach.service.ConstructionService;
 import com.keves.dreamreach.service.EconomyService;
 import com.keves.dreamreach.service.RewardService;
+import com.keves.dreamreach.service.TavernService;
 import com.keves.dreamreach.service.TrainingService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,6 +38,7 @@ public class PlayerController {
     private final ConstructionTaskRepository constructionTaskRepository;
     private final TrainingService trainingService;
     private final TrainingTaskRepository trainingTaskRepository;
+    private final TavernService tavernService;
 
     public PlayerController(PlayerAccountRepository accountRepository,
                             GameEconomyConfig economyConfig,
@@ -45,7 +47,8 @@ public class PlayerController {
                             ConstructionService constructionService,
                             ConstructionTaskRepository constructionTaskRepository,
                             TrainingService trainingService,
-                            TrainingTaskRepository trainingTaskRepository) {
+                            TrainingTaskRepository trainingTaskRepository,
+                            TavernService tavernService) {
         this.accountRepository = accountRepository;
         this.economyConfig = economyConfig;
         this.rewardService = rewardService;
@@ -54,6 +57,7 @@ public class PlayerController {
         this.constructionTaskRepository = constructionTaskRepository;
         this.trainingService = trainingService;
         this.trainingTaskRepository = trainingTaskRepository;
+        this.tavernService = tavernService;
     }
 
     @GetMapping("/me")
@@ -65,7 +69,9 @@ public class PlayerController {
 
         PlayerProfile profile = account.getProfile();
 
+        // Run the "lazy checks" to process offline time for the economy and the Tavern
         economyService.updateProductionState(profile);
+        tavernService.processArrivals(profile);
 
         PlayerPopulation pop = profile.getPopulation();
 
