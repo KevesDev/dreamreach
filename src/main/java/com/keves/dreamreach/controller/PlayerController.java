@@ -1,11 +1,7 @@
 package com.keves.dreamreach.controller;
 
 import com.keves.dreamreach.config.GameEconomyConfig;
-import com.keves.dreamreach.dto.BuildingConfigResponse;
-import com.keves.dreamreach.dto.ConstructionTaskResponse;
-import com.keves.dreamreach.dto.PlayerProfileResponse;
-import com.keves.dreamreach.dto.TrainingTaskResponse;
-import com.keves.dreamreach.dto.TrainingConfigResponse;
+import com.keves.dreamreach.dto.*;
 import com.keves.dreamreach.entity.PlayerAccount;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.entity.PlayerPopulation;
@@ -26,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -80,6 +77,16 @@ public class PlayerController {
         int woodRate = (pop != null ? pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter() : 0) + economyConfig.getBasePassiveWood();
         int stoneRate = (pop != null ? pop.getStoneworkers() * economyConfig.getStonePerStoneworker() : 0) + economyConfig.getBasePassiveStone();
 
+        // Map real database building instances to Response DTOs
+        List<BuildingInstanceResponse> buildingResponses = profile.getBuildings().stream()
+                .map(b -> BuildingInstanceResponse.builder()
+                        .id(b.getId())
+                        .buildingType(b.getBuildingType())
+                        .level(b.getLevel())
+                        .assignedWorkers(b.getAssignedWorkers())
+                        .build())
+                .collect(Collectors.toList());
+
         List<ConstructionTaskResponse> activeTasks = constructionTaskRepository.findByProfileId(profile.getId())
                 .stream()
                 .map(task -> ConstructionTaskResponse.builder()
@@ -100,7 +107,6 @@ public class PlayerController {
                         .build())
                 .collect(Collectors.toList());
 
-        // Extract backend config dynamically for the frontend dashboard
         List<TrainingConfigResponse> trainingConfigs = List.of(
                 TrainingConfigResponse.builder().professionType("woodcutter")
                         .goldCost(economyConfig.getCostTrainWoodcutterGold())
@@ -186,6 +192,7 @@ public class PlayerController {
                 .towers((int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("tower")).count())
                 .bakeries((int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("bakery")).count())
                 .huntingLodges((int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("lodge")).count())
+                .buildings(buildingResponses)
 
                 .activeConstructions(activeTasks)
                 .activeTrainingTasks(activeTrainingTasks)
@@ -194,6 +201,36 @@ public class PlayerController {
                 .build();
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Endpoint to assign a trained professional to a specific structure.
+     */
+    @PostMapping("/building/assign")
+    public ResponseEntity<?> assignWorker(Authentication authentication, @RequestParam String buildingId) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+        try {
+            economyService.assignWorker(account.getProfile(), UUID.fromString(buildingId));
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Endpoint to remove a worker from a specific structure.
+     */
+    @PostMapping("/building/remove")
+    public ResponseEntity<?> removeWorker(Authentication authentication, @RequestParam String buildingId) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+        try {
+            economyService.removeWorker(account.getProfile(), UUID.fromString(buildingId));
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping("/claim")
@@ -271,8 +308,6 @@ public class PlayerController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
-    // --- TAX ENDPOINTS ---
 
     @PostMapping("/taxes/bracket")
     public ResponseEntity<?> setTaxBracket(Authentication authentication, @RequestParam String bracket) {
