@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api from '../api/client';
-import { Icon } from '../components/Icon';
 import BuildingSidePanel from '../components/BuildingSidePanel';
+import WorldLayer from '../components/WorldLayer';
+import RoyalLedger from '../components/RoyalLedger';
+import CitizenDashboard from '../components/CitizenDashboard';
 import './KingdomView.css';
 
 export interface ConstructionTaskResponse {
@@ -12,10 +14,32 @@ export interface ConstructionTaskResponse {
     completionTimeEpoch: number;
 }
 
+export interface TrainingTaskResponse {
+    id: string;
+    professionType: string;
+    startTimeEpoch: number;
+    completionTimeEpoch: number;
+}
+
+export interface TrainingConfigResponse {
+    professionType: string;
+    goldCost: number;
+    foodCost: number;
+    trainTimeSeconds: number;
+}
+
+export interface BuildingConfigResponse {
+    buildingType: string;
+    woodCost: number;
+    stoneCost: number;
+    buildTimeSeconds: number;
+}
+
 export interface PlayerProfile {
     displayName: string;
     totalPopulation: number;
     maxPopulation: number;
+    idlePeasants: number;
     woodcutters: number;
     stoneworkers: number;
     hunters: number;
@@ -33,6 +57,9 @@ export interface PlayerProfile {
     huntingLodges: number;
 
     activeConstructions?: ConstructionTaskResponse[];
+    activeTrainingTasks?: TrainingTaskResponse[];
+    trainingConfigs?: TrainingConfigResponse[];
+    buildingConfigs?: BuildingConfigResponse[]; // Receive dynamic costs from backend
 }
 
 export interface BuildingCost {
@@ -69,6 +96,10 @@ export interface KingdomEvent {
 export default function KingdomView() {
     const { profile, fetchProfile } = useOutletContext<{ profile: PlayerProfile, fetchProfile: () => void }>();
 
+    // Top-level navigation state
+    const [activeTab, setActiveTab] = useState<'buildings' | 'citizens'>('buildings');
+
+    // Building management state
     const [selectedGroup, setSelectedGroup] = useState<BuildingGroup | null>(null);
     const [selectedInstance, setSelectedInstance] = useState<BuildingInstance | null>(null);
     const [isBusy, setIsBusy] = useState(false);
@@ -79,6 +110,24 @@ export default function KingdomView() {
         const timer = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // Handle tab switching safely
+    const handleTabChange = (tab: 'buildings' | 'citizens') => {
+        setActiveTab(tab);
+        if (tab === 'citizens') {
+            // Close the building panel immediately when switching to Citizens
+            setSelectedGroup(null);
+            setSelectedInstance(null);
+        }
+    };
+
+    // Helper to dynamically locate backend config values
+    const getBuildingConfig = (type: string) => profile?.buildingConfigs?.find(c => c.buildingType === type);
+
+    // Grab the dynamic configs (fallback to null if loading)
+    const houseConfig = getBuildingConfig('house');
+    const bakeryConfig = getBuildingConfig('bakery');
+    const lodgeConfig = getBuildingConfig('lodge');
 
     const buildingGroups: BuildingGroup[] = [
         {
@@ -95,7 +144,11 @@ export default function KingdomView() {
             singularName: 'House',
             icon: 'home',
             description: 'Provides housing for your peasant population. More houses mean a higher population cap.',
-            cost: { wood: 50, stone: 10, timeSeconds: 60 },
+            cost: houseConfig ? {
+                wood: houseConfig.woodCost,
+                stone: houseConfig.stoneCost,
+                timeSeconds: houseConfig.buildTimeSeconds
+            } : undefined,
             instances: Array.from({ length: profile?.houses || 0 }).map((_, i) => ({
                 id: `house-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 0, productionRate: 0
             }))
@@ -106,7 +159,11 @@ export default function KingdomView() {
             singularName: 'Bakery',
             icon: 'food',
             description: 'Specialized structures where assigned peasants bake bread to slowly generate food.',
-            cost: { wood: 100, stone: 50, timeSeconds: 300 },
+            cost: bakeryConfig ? {
+                wood: bakeryConfig.woodCost,
+                stone: bakeryConfig.stoneCost,
+                timeSeconds: bakeryConfig.buildTimeSeconds
+            } : undefined,
             instances: Array.from({ length: profile?.bakeries || 0 }).map((_, i) => ({
                 id: `bakery-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 2, productionRate: 10
             }))
@@ -117,7 +174,11 @@ export default function KingdomView() {
             singularName: 'Hunting Lodge',
             icon: 'combat',
             description: 'Hunters stationed here yield a faster, riskier food supply for the kingdom.',
-            cost: { wood: 120, stone: 30, timeSeconds: 300 },
+            cost: lodgeConfig ? {
+                wood: lodgeConfig.woodCost,
+                stone: lodgeConfig.stoneCost,
+                timeSeconds: lodgeConfig.buildTimeSeconds
+            } : undefined,
             instances: Array.from({ length: profile?.huntingLodges || 0 }).map((_, i) => ({
                 id: `lodge-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 2, productionRate: 0
             }))
@@ -157,50 +218,47 @@ export default function KingdomView() {
     return (
         <div className="kingdom-container">
             <div className="kingdom-main">
-                <div className="world-layer">
-                    {buildingGroups.map((group) => {
-                        const task = profile?.activeConstructions?.find(t => t.buildingType === group.type);
-                        const isReady = task && now >= task.completionTimeEpoch;
-
-                        return (
-                            <div
-                                key={group.type}
-                                className={`map-node ${selectedGroup?.type === group.type ? 'active' : ''} ${isReady ? 'ready' : ''}`}
-                                onClick={() => {
-                                    setSelectedGroup(group);
-                                    setSelectedInstance(null);
-                                }}
-                            >
-                                {group.instances.length > 0 && (
-                                    <div className="node-badge">{group.instances.length}</div>
-                                )}
-                                <div className="node-icon-wrapper">
-                                    <Icon name={group.icon} size={32} />
-                                </div>
-                                <div className="node-label">{group.name}</div>
-                            </div>
-                        );
-                    })}
+                {/* Master Tab Navigation */}
+                <div className="kingdom-tabs">
+                    <button
+                        className={`kingdom-tab ${activeTab === 'buildings' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('buildings')}
+                    >
+                        Structures
+                    </button>
+                    <button
+                        className={`kingdom-tab ${activeTab === 'citizens' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('citizens')}
+                    >
+                        Citizens
+                    </button>
                 </div>
 
-                <div className="journal-container">
-                    <div className="journal-header">
-                        <h2>Royal Ledger</h2>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Latest Events</span>
-                    </div>
-
-                    <div className="journal-log">
-                        {events.map(event => (
-                            <div key={event.id} className={`journal-entry journal-entry--${event.type}`}>
-                                <span className="journal-time">[{event.timestamp}]</span>
-                                <span className="journal-text">{event.message}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* Sub-Views */}
+                {activeTab === 'buildings' ? (
+                    <>
+                        <WorldLayer
+                            buildingGroups={buildingGroups}
+                            selectedGroup={selectedGroup}
+                            activeConstructions={profile?.activeConstructions}
+                            now={now}
+                            onSelectGroup={(group) => {
+                                setSelectedGroup(group);
+                                setSelectedInstance(null);
+                            }}
+                        />
+                        <RoyalLedger events={events} />
+                    </>
+                ) : (
+                    <CitizenDashboard
+                        profile={profile}
+                        now={now}
+                        fetchProfile={fetchProfile}
+                    />
+                )}
             </div>
 
-            {selectedGroup && (
+            {selectedGroup && activeTab === 'buildings' && (
                 <BuildingSidePanel
                     selectedGroup={selectedGroup}
                     selectedInstance={selectedInstance}

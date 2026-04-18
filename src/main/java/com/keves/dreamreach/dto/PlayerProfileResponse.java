@@ -8,6 +8,7 @@ import java.util.List;
 
 /**
  * DTO for sending the user's profile data to the React dashboard.
+ * All dynamic economy configs are now passed here to prevent frontend hardcoding.
  */
 @Getter
 @Setter
@@ -37,7 +38,12 @@ public class PlayerProfileResponse {
     // Population metrics needed for the HUD and Citizen Management
     private int totalPopulation;
     private int maxPopulation;
-    private int idlePeasants; // Added so UI knows how many can be trained
+
+    // The specific breakdown of the population
+    private int idlePeasants;
+    private int woodcutters;
+    private int stoneworkers;
+    private int hunters;
     private int bakers;
 
     // Structure Counts
@@ -48,5 +54,9 @@ public class PlayerProfileResponse {
     private int huntingLodges;
 
     private List<ConstructionTaskResponse> activeConstructions;
-    private List<TrainingTaskResponse> activeTrainingTasks; // Added for the training queue UI
+    private List<TrainingTaskResponse> activeTrainingTasks;
+    private List<TrainingConfigResponse> trainingConfigs;
+
+    // Added to pass dynamic building costs/timers to the UI
+    private List<BuildingConfigResponse> buildingConfigs;
 }
