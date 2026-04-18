@@ -38,8 +38,8 @@ public class GameEconomyConfig {
     private int maxHappiness = 100;
 
     // --- RNG POPULATION SIMULATION ---
-    private int popTickIntervalMinutes = 10;
-    private double baseMovementChance = 0.55;
+    private int popTickIntervalMinutes = 15;
+    private double baseMovementChance = 0.50;
     private double baseJoinWeight = 0.66;
     private double popChangePercentMin = 0.03;
     private double popChangePercentMax = 0.05;
@@ -82,11 +82,38 @@ public class GameEconomyConfig {
     private int costTowerWood = 100;
     private int costTowerStone = 100;
 
+    // The base construction cost for the Tavern
+    private int costTavernWood = 200;
+    private int costTavernStone = 150;
+
     // --- CONSTRUCTION BASE TIMERS (in seconds) ---
     private int buildTimeHouse = 60;     // 1 min
     private int buildTimeBakery = 300;   // 5 mins
     private int buildTimeTower = 300;
     private int buildTimeLodge = 300;    // 5 mins
+
+    // The base construction time for the Tavern
+    private int buildTimeTavern = 600;   // 10 mins
+
+    // --- TAVERN RECRUITMENT LOGIC ---
+    // The required Keep Level to construct or access the Tavern
+    private int tavernUnlockLevel = 5;
+
+    // How often (in minutes) the server calculates if a hero arrived
+    private int tavernCheckIntervalMinutes = 60;
+
+    // The percentage chance (0.0 to 1.0) per interval that an empty slot gets a hero
+    private double tavernArrivalChance = 0.15;
+
+    // How long (in hours) a hero will wait in the Tavern before leaving
+    private int tavernStayDurationHours = 48;
+
+    // Post-purchase Gacha Rarity Weights (e.g. 0.50 = 50% chance for Common)
+    private double rarityWeightCommon = 0.50;
+    private double rarityWeightUncommon = 0.30;
+    private double rarityWeightRare = 0.14;
+    private double rarityWeightEpic = 0.05;
+    private double rarityWeightLegendary = 0.01;
 
     // --- TRAINING COSTS & TIMERS ---
     // Granular balancing for each profession type

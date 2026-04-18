@@ -42,6 +42,10 @@ public class PlayerProfile {
     @Column(name = "last_tax_collection_time", nullable = false)
     private Instant lastTaxCollectionTime = Instant.now();
 
+    // --- TAVERN CHECK TRACKING ---
+    @Column(name = "last_tavern_check_time")
+    private Instant lastTavernCheckTime = Instant.now();
+
     /**
      * The alliance this player is part of.
      * Using FetchType.LAZY makes it so we don't load the
