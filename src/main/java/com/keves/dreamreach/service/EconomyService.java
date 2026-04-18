@@ -37,10 +37,16 @@ public class EconomyService {
         // Iterate through physical bakeries and multiply their specific assigned workers by the base rate
         int bakeryProduction = profile.getBuildings().stream()
                 .filter(b -> b.getBuildingType().equalsIgnoreCase("bakery"))
-                .mapToInt(b -> b.getAssignedWorkers() * economyConfig.getFoodPerBakery())
+                .mapToInt(b -> b.getAssignedWorkers() * economyConfig.getFoodPerBaker())
                 .sum();
 
-        int production = (pop.getHunters() * economyConfig.getFoodPerHunter()) + bakeryProduction;
+        // Iterate through physical lodges and multiply their specific assigned workers by the base rate
+        int lodgeProduction = profile.getBuildings().stream()
+                .filter(b -> b.getBuildingType().equalsIgnoreCase("lodge"))
+                .mapToInt(b -> b.getAssignedWorkers() * economyConfig.getFoodPerHunter())
+                .sum();
+
+        int production = lodgeProduction + bakeryProduction;
 
         int consumption = pop.getTotalPopulation() * economyConfig.getFoodConsumedPerPeasant();
 

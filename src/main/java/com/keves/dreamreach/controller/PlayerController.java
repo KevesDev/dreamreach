@@ -132,7 +132,7 @@ public class PlayerController {
                         .stoneCost(economyConfig.getCostBakeryStone())
                         .buildTimeSeconds(economyConfig.getBuildTimeBakery())
                         .maxWorkers(economyConfig.getMaxWorkersBakery())
-                        .productionRate(economyConfig.getFoodPerBakery()).build(),
+                        .productionRate(economyConfig.getFoodPerBaker()).build(),
                 BuildingConfigResponse.builder().buildingType("lodge")
                         .woodCost(economyConfig.getCostLodgeWood())
                         .stoneCost(economyConfig.getCostLodgeStone())
