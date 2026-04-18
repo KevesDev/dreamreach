@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.UUID;
+import java.time.Instant;
 
 /**
  * This represents the public-facing identity of a player within the game.
@@ -30,6 +31,16 @@ public class PlayerProfile {
 
     @Column(name = "is_personal_pvp_enabled", nullable = false)
     private boolean isPersonalPvpEnabled = false;
+
+    // --- NEW TAX & HAPPINESS FIELDS ---
+    @Column(name = "happiness", nullable = false)
+    private int happiness = 50;
+
+    @Column(name = "tax_bracket", nullable = false, length = 20)
+    private String taxBracket = "NORMAL"; // "LOW", "NORMAL", "HIGH"
+
+    @Column(name = "last_tax_collection_time", nullable = false)
+    private Instant lastTaxCollectionTime = Instant.now();
 
     /**
      * The alliance this player is part of.

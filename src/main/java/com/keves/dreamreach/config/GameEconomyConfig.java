@@ -39,6 +39,18 @@ public class GameEconomyConfig {
     private int peasantJoinThreshold = 75;
     private int peasantLeaveThreshold = 25;
 
+    // --- TAXES & HAPPINESS ---
+    private double taxRateLowMultiplier = 0.5;
+    private double taxRateNormalMultiplier = 1.0;
+    private double taxRateHighMultiplier = 1.5;
+
+    private int happinessModifierLowTax = 2;
+    private int happinessModifierNormalTax = 0;
+    private int happinessModifierHighTax = -5;
+
+    private int taxGoldPerCitizenPerHour = 2;
+    private int taxCooldownMinutes = 60;
+
     // --- CONSUMPTION RATES (Per Hour) ---
     private int foodConsumedPerPeasant = 2;
 
