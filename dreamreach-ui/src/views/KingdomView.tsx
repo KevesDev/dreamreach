@@ -75,6 +75,7 @@ export interface PlayerProfile {
     lastTaxCollectionTimeEpoch: number;
 
     keepLevel: number;
+    maxStorage: number;
     houses: number;
     towers: number;
     bakeries: number;

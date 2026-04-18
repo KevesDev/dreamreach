@@ -288,6 +288,10 @@ export default function BuildingSidePanel({
                             <button className="button" style={{ width: '100%', padding: '12px' }} onClick={() => onSelectInstance(selectedGroup.instances[0])}>
                                 Enter the Tavern
                             </button>
+                        ) : selectedGroup.instances.length === 1 && selectedGroup.type === 'keep' ? (
+                            <button className="button" style={{ width: '100%', padding: '12px' }} onClick={() => onSelectInstance(selectedGroup.instances[0])}>
+                                View Vault Logistics
+                            </button>
                         ) : (
                             selectedGroup.instances.map((instance, index) => (
                                 <div key={instance.id} className="instance-item" onClick={() => onSelectInstance(instance)}>
@@ -338,7 +342,29 @@ export default function BuildingSidePanel({
 
             {displayInstance && (
                 <>
-                    {selectedGroup.type === 'tavern' ? (
+                    {selectedGroup.type === 'keep' ? (
+                        <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
+                            <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-md)', color: 'var(--text-muted)' }}>VAULT STORAGE</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {[
+                                    { label: 'Food', current: profile.food, color: 'var(--success)' },
+                                    { label: 'Wood', current: profile.wood, color: '#cd853f' },
+                                    { label: 'Stone', current: profile.stone, color: 'var(--text-muted)' },
+                                    { label: 'Gold', current: profile.gold, color: 'var(--accent-gold)' }
+                                ].map(res => (
+                                    <div key={res.label}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                                            <span>{res.label}</span>
+                                            <span><span style={{ color: res.current >= profile.maxStorage ? 'var(--danger)' : 'inherit' }}>{res.current}</span> / {profile.maxStorage}</span>
+                                        </div>
+                                        <div className="progress-bar-container" style={{ height: '6px', background: 'var(--surface-2)' }}>
+                                            <div className="progress-bar-fill" style={{ width: `${Math.min(100, (res.current / profile.maxStorage) * 100)}%`, background: res.color }}></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : selectedGroup.type === 'tavern' ? (
                         renderTavernInterior()
                     ) : isHouse ? (
                         <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>

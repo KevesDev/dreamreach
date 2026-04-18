@@ -55,6 +55,7 @@ public class PlayerProfileResponse {
 
     // Structure Data
     private int keepLevel;
+    private int maxStorage;
     private int houses;
     private int towers;
     private int bakeries;

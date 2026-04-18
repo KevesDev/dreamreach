@@ -2,6 +2,7 @@ package com.keves.dreamreach.controller;
 
 import com.keves.dreamreach.config.GameEconomyConfig;
 import com.keves.dreamreach.dto.*;
+import com.keves.dreamreach.entity.BuildingInstance;
 import com.keves.dreamreach.entity.PlayerAccount;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.entity.PlayerPopulation;
@@ -62,6 +63,14 @@ public class PlayerController {
         tavernService.processArrivals(profile);
 
         PlayerPopulation pop = profile.getPopulation();
+
+        // Calculate actual keep level
+        int keepLevel = profile.getBuildings().stream()
+                .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
+                .mapToInt(BuildingInstance::getLevel)
+                .max().orElse(1);
+
+        int maxStorage = keepLevel * economyConfig.getBaseStoragePerKeepLevel();
 
         int houseCount = (int) profile.getBuildings().stream()
                 .filter(b -> b.getBuildingType().equalsIgnoreCase("house")).count();
@@ -192,7 +201,8 @@ public class PlayerController {
                 .hunters(pop != null ? pop.getHunters() : 0)
                 .bakers(pop != null ? pop.getBakers() : 0)
 
-                .keepLevel(1)
+                .keepLevel(keepLevel)
+                .maxStorage(maxStorage)
                 .houses(houseCount)
                 .towers((int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("tower")).count())
                 .bakeries((int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("bakery")).count())
