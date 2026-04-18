@@ -51,6 +51,14 @@ export default function BuildingSidePanel({
         }
     };
 
+    const getWorkerName = (type: string) => {
+        switch(type.toLowerCase()) {
+            case 'bakery': return 'Bakers';
+            case 'lodge': return 'Hunters';
+            default: return 'Workers';
+        }
+    };
+
     const getUnassignedCount = (type: string) => {
         const total = type.toLowerCase() === 'bakery' ? profile?.bakers : profile?.hunters;
         const assigned = (profile?.buildings || [])
@@ -125,6 +133,7 @@ export default function BuildingSidePanel({
         ? (profile?.wood >= selectedGroup.cost.wood && profile?.stone >= selectedGroup.cost.stone)
         : true;
 
+    // Strict profile values rather than fallbacks to maintain consistency with GameEconomyConfig
     const hapHigh = profile.maxHappiness * 0.75;
     const hapLow = profile.maxHappiness * 0.25;
 
@@ -325,7 +334,7 @@ export default function BuildingSidePanel({
                                         <button className="button" style={{ flex: 1 }} disabled={isBusy || displayInstance.assignedWorkers === displayInstance.maxWorkers || getUnassignedCount(selectedGroup.type) === 0} onClick={handleAssign}>+ Assign</button>
                                     </div>
                                     {getUnassignedCount(selectedGroup.type) === 0 && displayInstance.assignedWorkers < displayInstance.maxWorkers && (
-                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>No available {selectedGroup.singularName}s trained.</p>
+                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>No available {getWorkerName(selectedGroup.type)} trained.</p>
                                     )}
                                 </div>
                             )}
