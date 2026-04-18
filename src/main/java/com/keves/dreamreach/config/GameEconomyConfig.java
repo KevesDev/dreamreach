@@ -73,18 +73,18 @@ public class GameEconomyConfig {
     // --- CONSTRUCTION BASE COSTS (Wood, Stone) ---
     // TODO: these might scale by level (e.g., cost * level^1.5)
     private int costHouseWood = 50;
-    private int costHouseStone = 10;
+    private int costHouseStone = 20;
     private int costBakeryWood = 100;
-    private int costBakeryStone = 50;
+    private int costBakeryStone = 80;
     private int costLodgeWood = 120;
-    private int costLodgeStone = 30;
+    private int costLodgeStone = 50;
 
     private int costTowerWood = 100;
     private int costTowerStone = 100;
 
     // The base construction cost for the Tavern
-    private int costTavernWood = 200;
-    private int costTavernStone = 150;
+    private int costTavernWood = 10;
+    private int costTavernStone = 10;
 
     // --- CONSTRUCTION BASE TIMERS (in seconds) ---
     private int buildTimeHouse = 60;     // 1 min
