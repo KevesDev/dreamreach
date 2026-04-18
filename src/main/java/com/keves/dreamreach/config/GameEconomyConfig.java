@@ -38,8 +38,8 @@ public class GameEconomyConfig {
     private int maxHappiness = 100;
 
     // --- RNG POPULATION SIMULATION ---
-    private int popTickIntervalMinutes = 15;
-    private double baseMovementChance = 0.50;
+    private int popTickIntervalMinutes = 10;
+    private double baseMovementChance = 0.55;
     private double baseJoinWeight = 0.66;
     private double popChangePercentMin = 0.03;
     private double popChangePercentMax = 0.05;
