@@ -1,6 +1,7 @@
 package com.keves.dreamreach.service;
 
 import com.keves.dreamreach.config.GameEconomyConfig;
+import com.keves.dreamreach.entity.BuildingInstance;
 import com.keves.dreamreach.entity.ConstructionTask;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.entity.PlayerResources;
@@ -99,22 +100,14 @@ public class ConstructionService {
             throw new IllegalStateException("The construction of " + buildingType + " is not yet complete.");
         }
 
-        switch (buildingType.toLowerCase()) {
-            case "house":
-                profile.getStructures().setHouses(profile.getStructures().getHouses() + 1);
-                break;
-            case "bakery":
-                profile.getStructures().setBakeries(profile.getStructures().getBakeries() + 1);
-                break;
-            case "tower":
-                profile.getStructures().setTowers(profile.getStructures().getTowers() + 1);
-                break;
-            case "lodge":
-                profile.getStructures().setHuntingLodges(profile.getStructures().getHuntingLodges() + 1);
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown building type completed: " + buildingType);
-        }
+        // Spawn a new physical instance in the kingdom
+        BuildingInstance newBuilding = new BuildingInstance();
+        newBuilding.setBuildingType(buildingType.toLowerCase());
+        newBuilding.setLevel(1);
+        newBuilding.setAssignedWorkers(0);
+        newBuilding.setProfile(profile);
+
+        profile.getBuildings().add(newBuilding);
 
         taskRepository.delete(task);
         profileRepository.save(profile);

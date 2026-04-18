@@ -68,6 +68,7 @@ public class PlayerProfile {
     @OneToOne(mappedBy = "profile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private PlayerPopulation population;
 
-    @OneToOne(mappedBy = "profile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private PlayerStructures structures;
+    // Relational Architecture: One profile has many physical building instances
+    @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private java.util.List<BuildingInstance> buildings = new java.util.ArrayList<>();
 }
