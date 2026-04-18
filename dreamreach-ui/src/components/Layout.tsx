@@ -157,7 +157,13 @@ export default function Layout() {
                         </button>
                     )}
 
-                    <div style={{ color: 'var(--accent-gold)' }} title="Gold"><Icon name="gold" size={14} /> {profile.gold}</div>
+                    <div style={{ color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '4px' }} title="Gold">
+                        <Icon name="gold" size={14} /> {profile.gold}
+                    </div>
+
+                    <div style={{ color: '#a335ee', display: 'flex', alignItems: 'center', gap: '4px' }} title="Gems">
+                        <Icon name="gems" size={14} /> {profile.gems}
+                    </div>
 
                     <button title="Logout" onClick={() => { localStorage.removeItem('dreamreach_token'); navigate('/login'); }} className="button--danger">
                         <Icon name="logout" size={14} />

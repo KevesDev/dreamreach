@@ -75,17 +75,27 @@ export default function BuildingSidePanel({
 
     const formatTimeRemaining = (end: number, current: number) => {
         if (current >= end) return "Ready!";
-        const diffSeconds = Math.ceil((end - current) / 1000);
-        const m = Math.floor(diffSeconds / 60);
+        const diffSeconds = Math.max(0, Math.ceil((end - current) / 1000));
+        const h = Math.floor(diffSeconds / 3600);
+        const m = Math.floor((diffSeconds % 3600) / 60);
         const s = diffSeconds % 60;
+
+        if (h > 0) {
+            return `${h}h ${m}m`;
+        }
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
     const formatTimeRemainingTaxes = (end: number, current: number) => {
         if (current >= end) return "Ready!";
-        const diffSeconds = Math.ceil((end - current) / 1000);
-        const m = Math.floor(diffSeconds / 60);
+        const diffSeconds = Math.max(0, Math.ceil((end - current) / 1000));
+        const h = Math.floor(diffSeconds / 3600);
+        const m = Math.floor((diffSeconds % 3600) / 60);
         const s = diffSeconds % 60;
+
+        if (h > 0) {
+            return `${h}h ${m}m`;
+        }
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
@@ -133,9 +143,21 @@ export default function BuildingSidePanel({
         ? (profile?.wood >= selectedGroup.cost.wood && profile?.stone >= selectedGroup.cost.stone)
         : true;
 
-    // Strict profile values rather than fallbacks to maintain consistency with GameEconomyConfig
     const hapHigh = profile.maxHappiness * 0.75;
     const hapLow = profile.maxHappiness * 0.25;
+
+    // --- Dynamic Housing Calculations ---
+    const isHouse = selectedGroup.type === 'house';
+    let occupants = 0;
+    let houseCapacity = 5;
+
+    if (isHouse && displayInstance) {
+        houseCapacity = Math.round(profile.maxPopulation / Math.max(1, profile.houses));
+        // Find which number house this is to "fill" them up sequentially
+        const instanceIndex = profile.buildings?.filter(b => b.buildingType === 'house').findIndex(b => b.id === displayInstance.id) || 0;
+        const previousOccupants = instanceIndex * houseCapacity;
+        occupants = Math.max(0, Math.min(houseCapacity, profile.totalPopulation - previousOccupants));
+    }
 
     const renderTavernInterior = () => {
         if (!tavernListing) {
@@ -182,6 +204,8 @@ export default function BuildingSidePanel({
             </div>
         );
     };
+
+    const globalWorkerData = getGlobalWorkerCount(selectedGroup.type);
 
     return (
         <aside className="side-panel">
@@ -244,25 +268,21 @@ export default function BuildingSidePanel({
                         </div>
                     )}
 
-                    <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
-                        <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-sm)', color: 'var(--text-muted)' }}>KINGDOM LABOR</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Total Villagers:</span>
-                                <span>{profile.totalPopulation} / {profile.maxPopulation}</span>
-                            </div>
-                            {getGlobalWorkerCount(selectedGroup.type) && (
+                    {globalWorkerData && (
+                        <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
+                            <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-sm)', color: 'var(--text-muted)' }}>KINGDOM LABOR</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-gold)' }}>
-                                    <span>{getGlobalWorkerCount(selectedGroup.type)?.label}:</span>
-                                    <span>{getGlobalWorkerCount(selectedGroup.type)?.count}</span>
+                                    <span>{globalWorkerData.label}:</span>
+                                    <span>{globalWorkerData.count}</span>
                                 </div>
-                            )}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'var(--space-lg)' }}>
                         <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>YOUR STRUCTURES</h4>
-                        {selectedGroup.instances.length === 0 && (<span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>You do not have any of these structures.</span>)}
+                        {selectedGroup.instances.length === 0 && (<span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>You don't have any of these structures.</span>)}
 
                         {selectedGroup.instances.length === 1 && selectedGroup.type === 'tavern' ? (
                             <button className="button" style={{ width: '100%', padding: '12px' }} onClick={() => onSelectInstance(selectedGroup.instances[0])}>
@@ -320,7 +340,15 @@ export default function BuildingSidePanel({
                 <>
                     {selectedGroup.type === 'tavern' ? (
                         renderTavernInterior()
-                    ) : (
+                    ) : isHouse ? (
+                        <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
+                            <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-md)', color: 'var(--text-muted)' }}>RESIDENCE</h4>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                                <span>Occupants:</span>
+                                <span style={{ color: 'var(--accent-gold)' }}>{occupants} / {houseCapacity}</span>
+                            </div>
+                        </div>
+                    ) : (displayInstance.maxWorkers > 0 || displayInstance.productionRate > 0) ? (
                         <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
                             <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-md)', color: 'var(--text-muted)' }}>MANAGEMENT</h4>
                             {displayInstance.maxWorkers > 0 && (
@@ -345,7 +373,7 @@ export default function BuildingSidePanel({
                                 </div>
                             )}
                         </div>
-                    )}
+                    ) : null}
 
                     <div style={{ marginTop: 'auto' }}>
                         <button className="button--primary" style={{ width: '100%' }} disabled>UPGRADE TO LV.{displayInstance.level + 1}</button>
