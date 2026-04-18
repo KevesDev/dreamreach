@@ -29,14 +29,18 @@ public class EconomyService {
 
     /**
      * Calculates the net Food production per hour.
-     * Formula: (Hunters + Bakeries) - (Total Population Consumption)
      */
     public int calculateFoodRate(PlayerProfile profile) {
         PlayerPopulation pop = profile.getPopulation();
         if (pop == null) return 0;
 
-        int production = (pop.getHunters() * economyConfig.getFoodPerHunter())
-                + (profile.getStructures().getBakeries() * economyConfig.getFoodPerBakery());
+        // Iterate through physical bakeries and multiply their specific assigned workers by the base rate
+        int bakeryProduction = profile.getBuildings().stream()
+                .filter(b -> b.getBuildingType().equalsIgnoreCase("bakery"))
+                .mapToInt(b -> b.getAssignedWorkers() * economyConfig.getFoodPerBakery())
+                .sum();
+
+        int production = (pop.getHunters() * economyConfig.getFoodPerHunter()) + bakeryProduction;
 
         int consumption = pop.getTotalPopulation() * economyConfig.getFoodConsumedPerPeasant();
 
