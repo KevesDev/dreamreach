@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.UUID;
+import java.time.Instant;
 
 @Entity
 @Getter
@@ -19,7 +20,11 @@ public class PlayerPopulation {
     @Column(nullable = false) private int hunters = 0;
     @Column(nullable = false) private int woodcutters = 0;
     @Column(nullable = false) private int stoneworkers = 0;
-    @Column(nullable = false) private int bakers = 0; // The new profession
+    @Column(nullable = false) private int bakers = 0;
+
+    // Tracks the last time the 15-minute RNG loop evaluated this population
+    @Column(name = "last_population_tick", nullable = false)
+    private Instant lastPopulationTick = Instant.now();
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id", nullable = false, unique = true)

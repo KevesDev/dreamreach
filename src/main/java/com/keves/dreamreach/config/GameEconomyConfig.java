@@ -36,8 +36,14 @@ public class GameEconomyConfig {
     private int basePeasantCap = 10;
     private int capacityPerHouse = 5;
     private int maxHappiness = 100;
-    private int peasantJoinThreshold = 75;
-    private int peasantLeaveThreshold = 25;
+
+    // --- RNG POPULATION SIMULATION ---
+    private int popTickIntervalMinutes = 15;
+    private double baseMovementChance = 0.50;
+    private double baseJoinWeight = 0.66;
+    private double popChangePercentMin = 0.03;
+    private double popChangePercentMax = 0.05;
+    private double happinessImpactMultiplier = 0.01;
 
     // --- TAXES & HAPPINESS ---
     private double taxRateLowMultiplier = 0.5;
@@ -78,7 +84,7 @@ public class GameEconomyConfig {
     private int buildTimeTower = 300;
     private int buildTimeLodge = 300;    // 5 mins
 
-// --- TRAINING COSTS & TIMERS ---
+    // --- TRAINING COSTS & TIMERS ---
     // Granular balancing for each profession type
 
     // Woodcutter
