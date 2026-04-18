@@ -21,6 +21,11 @@ export interface PlayerProfile {
     hunters: number;
     bakers: number;
 
+    food: number;
+    wood: number;
+    stone: number;
+    gold: number;
+
     keepLevel: number;
     houses: number;
     towers: number;
@@ -28,6 +33,12 @@ export interface PlayerProfile {
     huntingLodges: number;
 
     activeConstructions?: ConstructionTaskResponse[];
+}
+
+export interface BuildingCost {
+    wood: number;
+    stone: number;
+    timeSeconds: number;
 }
 
 export interface BuildingInstance {
@@ -44,6 +55,7 @@ export interface BuildingGroup {
     singularName: string;
     icon: any;
     description: string;
+    cost?: BuildingCost;
     instances: BuildingInstance[];
 }
 
@@ -83,6 +95,7 @@ export default function KingdomView() {
             singularName: 'House',
             icon: 'home',
             description: 'Provides housing for your peasant population. More houses mean a higher population cap.',
+            cost: { wood: 50, stone: 10, timeSeconds: 60 },
             instances: Array.from({ length: profile?.houses || 0 }).map((_, i) => ({
                 id: `house-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 0, productionRate: 0
             }))
@@ -93,6 +106,7 @@ export default function KingdomView() {
             singularName: 'Bakery',
             icon: 'food',
             description: 'Specialized structures where assigned peasants bake bread to slowly generate food.',
+            cost: { wood: 100, stone: 50, timeSeconds: 300 },
             instances: Array.from({ length: profile?.bakeries || 0 }).map((_, i) => ({
                 id: `bakery-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 2, productionRate: 10
             }))
@@ -103,6 +117,7 @@ export default function KingdomView() {
             singularName: 'Hunting Lodge',
             icon: 'combat',
             description: 'Hunters stationed here yield a faster, riskier food supply for the kingdom.',
+            cost: { wood: 120, stone: 30, timeSeconds: 300 },
             instances: Array.from({ length: profile?.huntingLodges || 0 }).map((_, i) => ({
                 id: `lodge-${i + 1}`, level: 1, workersAssigned: 0, maxWorkers: 2, productionRate: 0
             }))
