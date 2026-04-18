@@ -81,12 +81,12 @@ public class GameEconomyConfig {
 
     // Hunter
     private int costTrainHunterGold = 20;
-    private int costTrainHunterFood = 40;
+    private int costTrainHunterFood = 0; // hunters cost 0 food in order to prevent a food outage soft-lock.
     private int trainTimeHunterSeconds = 60;
 
     // Baker
     private int costTrainBakerGold = 25;
-    private int costTrainBakerFood = 50;
+    private int costTrainBakerFood = 10;
     private int trainTimeBakerSeconds = 90;
 
     // --- COMBAT / DEFENSE ---
