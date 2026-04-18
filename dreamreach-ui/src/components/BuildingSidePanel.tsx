@@ -1,5 +1,4 @@
-import { Icon } from './Icon';
-import { BuildingGroup, BuildingInstance, PlayerProfile, ConstructionTaskResponse } from '../views/KingdomView';
+import type { BuildingGroup, BuildingInstance, PlayerProfile, ConstructionTaskResponse } from '../views/KingdomView';
 
 interface BuildingSidePanelProps {
     selectedGroup: BuildingGroup;
@@ -187,7 +186,9 @@ export default function BuildingSidePanel({
                             UPGRADE TO LV.{selectedInstance.level + 1}
                         </button>
                         <p style={{ fontSize: '0.7rem', textAlign: 'center', marginTop: 'var(--space-sm)', color: 'var(--text-muted)' }}>
-                            Requires Keep Lvl {selectedInstance.level + 1}
+                            {selectedGroup.type === 'keep'
+                                ? 'Upgrade requirements Not Met'
+                                : `Requires Keep Lvl ${selectedInstance.level + 1}`}
                         </p>
                     </div>
                 </>
