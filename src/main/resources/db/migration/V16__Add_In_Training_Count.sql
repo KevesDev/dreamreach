@@ -1,0 +1,1 @@
+ALTER TABLE player_population ADD COLUMN in_training INT NOT NULL DEFAULT 0;

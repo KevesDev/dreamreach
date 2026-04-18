@@ -15,9 +15,9 @@ public class GameEconomyConfig {
 
     // --- STARTING CONDITIONS ---
     private int startingFood = 150;
-    private int startingWood = 100;
-    private int startingStone = 50;
-    private int startingGold = 0;
+    private int startingWood = 150;
+    private int startingStone = 100;
+    private int startingGold = 20;
     private int startingGems = 0;
 
     private int startingHappiness = 50;

@@ -17,6 +17,8 @@ public class PlayerPopulation {
     @Column(nullable = false) private int happiness = 50;
 
     @Column(nullable = false) private int idlePeasants = 0;
+    @Column(nullable = false) private int inTraining = 0;
+
     @Column(nullable = false) private int hunters = 0;
     @Column(nullable = false) private int woodcutters = 0;
     @Column(nullable = false) private int stoneworkers = 0;
@@ -31,6 +33,6 @@ public class PlayerPopulation {
     private PlayerProfile profile;
 
     public int getTotalPopulation() {
-        return idlePeasants + hunters + woodcutters + stoneworkers + bakers;
+        return idlePeasants + inTraining + hunters + woodcutters + stoneworkers + bakers;
     }
 }

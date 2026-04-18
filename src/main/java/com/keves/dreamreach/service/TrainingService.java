@@ -87,10 +87,11 @@ public class TrainingService {
             throw new IllegalStateException("Not enough resources to train these peasants.");
         }
 
-        // 3. Deduct resources and immediately remove the peasants from the 'Idle' pool
+        // 3. Deduct resources and shift the peasants from 'Idle' to 'In Training'
         res.setGold(res.getGold() - totalGoldCost);
         res.setFood(res.getFood() - totalFoodCost);
         pop.setIdlePeasants(pop.getIdlePeasants() - quantity);
+        pop.setInTraining(pop.getInTraining() + quantity);
 
         // 4. Sequential Queuing Logic: Find the latest completion time of existing tasks
         List<TrainingTask> existingTasks = taskRepository.findByProfileIdOrderByStartTimeAsc(profile.getId());
@@ -137,6 +138,11 @@ public class TrainingService {
         }
 
         PlayerPopulation pop = profile.getPopulation();
+
+        // Safety check to ensure we don't drop below zero if something desynced
+        if (pop.getInTraining() > 0) {
+            pop.setInTraining(pop.getInTraining() - 1);
+        }
 
         // Physically convert the unit into its new profession
         switch (task.getProfessionType().toLowerCase()) {
