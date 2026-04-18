@@ -37,6 +37,14 @@ export interface BuildingConfigResponse {
     productionRate: number;
 }
 
+export interface BuildingInstance {
+    id: string;
+    level: number;
+    assignedWorkers: number;
+    maxWorkers: number;
+    productionRate: number;
+}
+
 export interface PlayerProfile {
     displayName: string;
     totalPopulation: number;
@@ -67,25 +75,18 @@ export interface PlayerProfile {
     towers: number;
     bakeries: number;
     huntingLodges: number;
+    buildings: { id: string, buildingType: string, level: number, assignedWorkers: number }[];
 
     activeConstructions?: ConstructionTaskResponse[];
     activeTrainingTasks?: TrainingTaskResponse[];
     trainingConfigs?: TrainingConfigResponse[];
-    buildingConfigs?: BuildingConfigResponse[]; // Receive dynamic costs from backend
+    buildingConfigs?: BuildingConfigResponse[];
 }
 
 export interface BuildingCost {
     wood: number;
     stone: number;
     timeSeconds: number;
-}
-
-export interface BuildingInstance {
-    id: string;
-    level: number;
-    workersAssigned: number;
-    maxWorkers: number;
-    productionRate: number;
 }
 
 export interface BuildingGroup {
@@ -128,21 +129,33 @@ export default function KingdomView() {
     const handleTabChange = (tab: 'buildings' | 'citizens') => {
         setActiveTab(tab);
         if (tab === 'citizens') {
-            // Close the building panel immediately when switching to Citizens
             setSelectedGroup(null);
             setSelectedInstance(null);
         }
     };
 
-    // Helper to dynamically locate backend config values
     const getBuildingConfig = (type: string) => profile?.buildingConfigs?.find(c => c.buildingType === type);
 
-    // Grab the dynamic configs (fallback to null if loading)
     const houseConfig = getBuildingConfig('house');
     const bakeryConfig = getBuildingConfig('bakery');
     const lodgeConfig = getBuildingConfig('lodge');
 
     const canCollectTaxes = profile?.lastTaxCollectionTimeEpoch ? (now - profile.lastTaxCollectionTimeEpoch) >= 3600000 : false;
+
+    // Helper to map DB instances to the UI structure
+    const mapInstances = (type: string, config: any): BuildingInstance[] => {
+        if (type === 'keep') return [{ id: 'keep-1', level: profile?.keepLevel || 1, assignedWorkers: 0, maxWorkers: 0, productionRate: 0 }];
+
+        return (profile?.buildings || [])
+            .filter(b => b.buildingType.toLowerCase() === type.toLowerCase())
+            .map(b => ({
+                id: b.id,
+                level: b.level,
+                assignedWorkers: b.assignedWorkers,
+                maxWorkers: config?.maxWorkers || 0,
+                productionRate: config?.productionRate || 0
+            }));
+    };
 
     const buildingGroups: BuildingGroup[] = [
         {
@@ -152,7 +165,7 @@ export default function KingdomView() {
             icon: 'kingdom',
             description: 'The central hub of your kingdom. Upgrading it unlocks new tiers of structures.',
             isActionReady: canCollectTaxes,
-            instances: [{ id: 'keep-1', level: profile?.keepLevel || 1, workersAssigned: 0, maxWorkers: 0, productionRate: 0 }]
+            instances: mapInstances('keep', null)
         },
         {
             type: 'house',
@@ -160,18 +173,8 @@ export default function KingdomView() {
             singularName: 'House',
             icon: 'home',
             description: 'Provides housing for your peasant population. More houses mean a higher population cap.',
-            cost: houseConfig ? {
-                wood: houseConfig.woodCost,
-                stone: houseConfig.stoneCost,
-                timeSeconds: houseConfig.buildTimeSeconds
-            } : undefined,
-            instances: Array.from({ length: profile?.houses || 0 }).map((_, i) => ({
-                id: `house-${i + 1}`,
-                level: 1,
-                workersAssigned: 0,
-                maxWorkers: houseConfig?.maxWorkers || 0,
-                productionRate: houseConfig?.productionRate || 0
-            }))
+            cost: houseConfig ? { wood: houseConfig.woodCost, stone: houseConfig.stoneCost, timeSeconds: houseConfig.buildTimeSeconds } : undefined,
+            instances: mapInstances('house', houseConfig)
         },
         {
             type: 'bakery',
@@ -179,18 +182,8 @@ export default function KingdomView() {
             singularName: 'Bakery',
             icon: 'food',
             description: 'Specialized structures where assigned peasants bake bread to slowly generate food.',
-            cost: bakeryConfig ? {
-                wood: bakeryConfig.woodCost,
-                stone: bakeryConfig.stoneCost,
-                timeSeconds: bakeryConfig.buildTimeSeconds
-            } : undefined,
-            instances: Array.from({ length: profile?.bakeries || 0 }).map((_, i) => ({
-                id: `bakery-${i + 1}`,
-                level: 1,
-                workersAssigned: 0,
-                maxWorkers: bakeryConfig?.maxWorkers || 0,
-                productionRate: bakeryConfig?.productionRate || 0
-            }))
+            cost: bakeryConfig ? { wood: bakeryConfig.woodCost, stone: bakeryConfig.stoneCost, timeSeconds: bakeryConfig.buildTimeSeconds } : undefined,
+            instances: mapInstances('bakery', bakeryConfig)
         },
         {
             type: 'lodge',
@@ -198,24 +191,12 @@ export default function KingdomView() {
             singularName: 'Hunting Lodge',
             icon: 'combat',
             description: 'Hunters stationed here yield a faster, riskier food supply for the kingdom.',
-            cost: lodgeConfig ? {
-                wood: lodgeConfig.woodCost,
-                stone: lodgeConfig.stoneCost,
-                timeSeconds: lodgeConfig.buildTimeSeconds
-            } : undefined,
-            instances: Array.from({ length: profile?.huntingLodges || 0 }).map((_, i) => ({
-                id: `lodge-${i + 1}`,
-                level: 1,
-                workersAssigned: 0,
-                maxWorkers: lodgeConfig?.maxWorkers || 0,
-                productionRate: lodgeConfig?.productionRate || 0
-            }))
+            cost: lodgeConfig ? { wood: lodgeConfig.woodCost, stone: lodgeConfig.stoneCost, timeSeconds: lodgeConfig.buildTimeSeconds } : undefined,
+            instances: mapInstances('lodge', lodgeConfig)
         }
     ];
 
-    const events: KingdomEvent[] = [
-        { id: 'e5', timestamp: '06:00', message: 'A new day dawns over the kingdom.', type: 'neutral' },
-    ];
+    const events: KingdomEvent[] = [{ id: 'e5', timestamp: '06:00', message: 'A new day dawns over the kingdom.', type: 'neutral' }];
 
     const handleConstruct = async (type: string) => {
         if (isBusy) return;
@@ -225,9 +206,7 @@ export default function KingdomView() {
             fetchProfile();
         } catch (err: any) {
             alert(err.response?.data || "Failed to start construction");
-        } finally {
-            setIsBusy(false);
-        }
+        } finally { setIsBusy(false); }
     };
 
     const handleComplete = async (type: string) => {
@@ -238,31 +217,17 @@ export default function KingdomView() {
             fetchProfile();
         } catch (err: any) {
             alert(err.response?.data || "Failed to complete construction");
-        } finally {
-            setIsBusy(false);
-        }
+        } finally { setIsBusy(false); }
     };
 
     return (
         <div className="kingdom-container">
             <div className="kingdom-main">
-                {/* Master Tab Navigation */}
                 <div className="kingdom-tabs">
-                    <button
-                        className={`kingdom-tab ${activeTab === 'buildings' ? 'active' : ''}`}
-                        onClick={() => handleTabChange('buildings')}
-                    >
-                        Structures
-                    </button>
-                    <button
-                        className={`kingdom-tab ${activeTab === 'citizens' ? 'active' : ''}`}
-                        onClick={() => handleTabChange('citizens')}
-                    >
-                        Citizens
-                    </button>
+                    <button className={`kingdom-tab ${activeTab === 'buildings' ? 'active' : ''}`} onClick={() => handleTabChange('buildings')}>Structures</button>
+                    <button className={`kingdom-tab ${activeTab === 'citizens' ? 'active' : ''}`} onClick={() => handleTabChange('citizens')}>Citizens</button>
                 </div>
 
-                {/* Sub-Views */}
                 {activeTab === 'buildings' ? (
                     <>
                         <WorldLayer
@@ -278,11 +243,7 @@ export default function KingdomView() {
                         <RoyalLedger events={events} />
                     </>
                 ) : (
-                    <CitizenDashboard
-                        profile={profile}
-                        now={now}
-                        fetchProfile={fetchProfile}
-                    />
+                    <CitizenDashboard profile={profile} now={now} fetchProfile={fetchProfile} />
                 )}
             </div>
 

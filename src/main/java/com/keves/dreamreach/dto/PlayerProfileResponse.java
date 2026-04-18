@@ -53,12 +53,15 @@ public class PlayerProfileResponse {
     private int hunters;
     private int bakers;
 
-    // Structure Counts
+    // Structure Data
     private int keepLevel;
     private int houses;
     private int towers;
     private int bakeries;
     private int huntingLodges;
+
+    // List of real database building instances for the UI to map uniquely
+    private List<BuildingInstanceResponse> buildings;
 
     private List<ConstructionTaskResponse> activeConstructions;
     private List<TrainingTaskResponse> activeTrainingTasks;

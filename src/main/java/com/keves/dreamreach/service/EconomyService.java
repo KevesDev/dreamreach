@@ -1,15 +1,18 @@
 package com.keves.dreamreach.service;
 
 import com.keves.dreamreach.config.GameEconomyConfig;
+import com.keves.dreamreach.entity.BuildingInstance;
 import com.keves.dreamreach.entity.PlayerPopulation;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.entity.PlayerResources;
+import com.keves.dreamreach.repository.BuildingInstanceRepository;
 import com.keves.dreamreach.repository.PlayerProfileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * The core engine for the Dreamreach macro-economy.
@@ -21,10 +24,14 @@ public class EconomyService {
 
     private final GameEconomyConfig economyConfig;
     private final PlayerProfileRepository profileRepository;
+    private final BuildingInstanceRepository buildingRepository;
 
-    public EconomyService(GameEconomyConfig economyConfig, PlayerProfileRepository profileRepository) {
+    public EconomyService(GameEconomyConfig economyConfig,
+                          PlayerProfileRepository profileRepository,
+                          BuildingInstanceRepository buildingRepository) {
         this.economyConfig = economyConfig;
         this.profileRepository = profileRepository;
+        this.buildingRepository = buildingRepository;
     }
 
     /**
@@ -51,6 +58,63 @@ public class EconomyService {
         int consumption = pop.getTotalPopulation() * economyConfig.getFoodConsumedPerPeasant();
 
         return production - consumption;
+    }
+
+    /**
+     * Increments the assigned workers for a specific building instance.
+     * Validates against professional population and building capacity.
+     */
+    @Transactional
+    public void assignWorker(PlayerProfile profile, UUID buildingId) {
+        updateProductionState(profile); // Ensure state is flushed before rates change
+
+        BuildingInstance building = buildingRepository.findById(buildingId)
+                .orElseThrow(() -> new IllegalArgumentException("Building not found with ID: " + buildingId));
+
+        if (!building.getProfile().getId().equals(profile.getId())) {
+            throw new IllegalArgumentException("Unauthorized: This building does not belong to the active profile.");
+        }
+
+        String type = building.getBuildingType().toLowerCase();
+        int maxCap = type.equals("bakery") ? economyConfig.getMaxWorkersBakery() : economyConfig.getMaxWorkersLodge();
+
+        if (building.getAssignedWorkers() >= maxCap) {
+            throw new IllegalStateException("This structure is already at maximum worker capacity.");
+        }
+
+        // Logic to verify there are unassigned professionals available in the population
+        PlayerPopulation pop = profile.getPopulation();
+        int currentlyAssignedTotal = profile.getBuildings().stream()
+                .filter(b -> b.getBuildingType().equalsIgnoreCase(building.getBuildingType()))
+                .mapToInt(BuildingInstance::getAssignedWorkers)
+                .sum();
+
+        int totalTrained = type.equals("bakery") ? pop.getBakers() : pop.getHunters();
+
+        if (currentlyAssignedTotal >= totalTrained) {
+            throw new IllegalStateException("No available " + (type.equals("bakery") ? "Bakers" : "Hunters") + " are idle to assign.");
+        }
+
+        building.setAssignedWorkers(building.getAssignedWorkers() + 1);
+        buildingRepository.save(building);
+    }
+
+    /**
+     * Decrements the assigned workers for a specific building instance.
+     */
+    @Transactional
+    public void removeWorker(PlayerProfile profile, UUID buildingId) {
+        updateProductionState(profile);
+
+        BuildingInstance building = buildingRepository.findById(buildingId)
+                .orElseThrow(() -> new IllegalArgumentException("Building not found with ID: " + buildingId));
+
+        if (building.getAssignedWorkers() <= 0) {
+            throw new IllegalStateException("There are no workers currently assigned to this structure.");
+        }
+
+        building.setAssignedWorkers(building.getAssignedWorkers() - 1);
+        buildingRepository.save(building);
     }
 
     /**
