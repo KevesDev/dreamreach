@@ -36,7 +36,10 @@ public class PlayerCharacterService {
                 .collect(Collectors.toList());
     }
 
-    private CharacterRosterResponse mapToRosterResponse(PlayerCharacter character) {
+    /**
+     * Maps a raw PlayerCharacter database record to the full D&D stat block DTO.
+     */
+    public CharacterRosterResponse mapToRosterResponse(PlayerCharacter character) {
         int str = character.getTotalStrength();
         int dex = character.getTotalDexterity();
         int con = character.getTotalConstitution();
@@ -44,10 +47,15 @@ public class PlayerCharacterService {
         int wis = character.getTotalWisdom();
         int cha = character.getTotalCharisma();
 
+        // Support both organic Tavern pulls and fallback seeded templates
+        String displayRarity = character.getRolledRarity() != null
+                ? character.getRolledRarity().name()
+                : character.getTemplate().getRarity().name();
+
         return CharacterRosterResponse.builder()
                 .characterId(character.getId())
                 .name(character.getTemplate().getName())
-                .rarity(character.getTemplate().getRarity().name())
+                .rarity(displayRarity)
                 .dndClass(character.getTemplate().getDndClass().name())
                 .level(character.getCurrentLevel())
                 .currentXp(character.getCurrentXp())
