@@ -97,13 +97,13 @@ public class GameEconomyConfig {
 
     // --- TAVERN RECRUITMENT LOGIC ---
     // The required Keep Level to construct or access the Tavern
-    private int tavernUnlockLevel = 5;
+    private int tavernUnlockLevel = 1;
 
     // How often (in minutes) the server calculates if a hero arrived
-    private int tavernCheckIntervalMinutes = 60;
+    private int tavernCheckIntervalMinutes = 1;
 
     // The percentage chance (0.0 to 1.0) per interval that an empty slot gets a hero
-    private double tavernArrivalChance = 0.15;
+    private double tavernArrivalChance = 0.5;
 
     // How long (in hours) a hero will wait in the Tavern before leaving
     private int tavernStayDurationHours = 48;
