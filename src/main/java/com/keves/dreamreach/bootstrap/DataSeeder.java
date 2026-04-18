@@ -31,52 +31,71 @@ public class DataSeeder implements CommandLineRunner {
             System.out.println("Bootstrapping Tavern Recruitment Pool...");
 
             try {
+                // Fetch existing templates to prevent unique constraint violations
+                List<CharacterTemplate> existingTemplates = characterTemplateRepository.findAll();
+
                 // --- 1. Uncommon Healer ---
-                CharacterTemplate goblinShaman = new CharacterTemplate();
-                goblinShaman.setName("Goblin Shaman");
-                goblinShaman.setRarity(Rarity.UNCOMMON);
-                goblinShaman.setDndClass(DndClass.CLERIC);
-                goblinShaman.setBaseStr(8); goblinShaman.setBaseDex(14); goblinShaman.setBaseCon(10);
-                goblinShaman.setBaseInt(12); goblinShaman.setBaseWis(16); goblinShaman.setBaseCha(10);
-                goblinShaman.setHitDieType(8);
-                goblinShaman.setPrimaryStat("WIS");
-                goblinShaman.setClassTags("[\"Magical\", \"Healer\"]");
-                goblinShaman.setFlavorQuips("{\"IDLE\": \"The spirits are restless.\"}");
-                goblinShaman.setPortraitUrl("/assets/hero.png");
-                goblinShaman.setBaseGoldCost(300);
-                goblinShaman.setBaseGemCost(30);
+                CharacterTemplate goblinShaman = existingTemplates.stream()
+                        .filter(t -> t.getName().equals("Goblin Shaman"))
+                        .findFirst()
+                        .orElseGet(() -> {
+                            CharacterTemplate t = new CharacterTemplate();
+                            t.setName("Goblin Shaman");
+                            t.setRarity(Rarity.UNCOMMON);
+                            t.setDndClass(DndClass.CLERIC);
+                            t.setBaseStr(8); t.setBaseDex(14); t.setBaseCon(10);
+                            t.setBaseInt(12); t.setBaseWis(16); t.setBaseCha(10);
+                            t.setHitDieType(8);
+                            t.setPrimaryStat("WIS");
+                            t.setClassTags("[\"Magical\", \"Healer\"]");
+                            t.setFlavorQuips("{\"IDLE\": \"The spirits are restless.\"}");
+                            t.setPortraitUrl("/assets/hero.png");
+                            t.setBaseGoldCost(300);
+                            t.setBaseGemCost(30);
+                            return characterTemplateRepository.save(t);
+                        });
 
                 // --- 2. Common Frontline ---
-                CharacterTemplate humanFighter = new CharacterTemplate();
-                humanFighter.setName("Human Vanguard");
-                humanFighter.setRarity(Rarity.COMMON);
-                humanFighter.setDndClass(DndClass.FIGHTER);
-                humanFighter.setBaseStr(16); humanFighter.setBaseDex(12); humanFighter.setBaseCon(14);
-                humanFighter.setBaseInt(10); humanFighter.setBaseWis(10); humanFighter.setBaseCha(10);
-                humanFighter.setHitDieType(10);
-                humanFighter.setPrimaryStat("STR");
-                humanFighter.setClassTags("[\"Brute\", \"Frontline\"]");
-                humanFighter.setFlavorQuips("{\"IDLE\": \"Ready for battle.\"}");
-                humanFighter.setPortraitUrl("/assets/hero.png");
-                humanFighter.setBaseGoldCost(150);
-                humanFighter.setBaseGemCost(15);
+                CharacterTemplate humanFighter = existingTemplates.stream()
+                        .filter(t -> t.getName().equals("Human Vanguard"))
+                        .findFirst()
+                        .orElseGet(() -> {
+                            CharacterTemplate t = new CharacterTemplate();
+                            t.setName("Human Vanguard");
+                            t.setRarity(Rarity.COMMON);
+                            t.setDndClass(DndClass.FIGHTER);
+                            t.setBaseStr(16); t.setBaseDex(12); t.setBaseCon(14);
+                            t.setBaseInt(10); t.setBaseWis(10); t.setBaseCha(10);
+                            t.setHitDieType(10);
+                            t.setPrimaryStat("STR");
+                            t.setClassTags("[\"Brute\", \"Frontline\"]");
+                            t.setFlavorQuips("{\"IDLE\": \"Ready for battle.\"}");
+                            t.setPortraitUrl("/assets/hero.png");
+                            t.setBaseGoldCost(150);
+                            t.setBaseGemCost(15);
+                            return characterTemplateRepository.save(t);
+                        });
 
                 // --- 3. Epic Spellcaster ---
-                CharacterTemplate elfWizard = new CharacterTemplate();
-                elfWizard.setName("Elven Evoker");
-                elfWizard.setRarity(Rarity.EPIC);
-                elfWizard.setDndClass(DndClass.WIZARD);
-                elfWizard.setBaseStr(8); elfWizard.setBaseDex(14); elfWizard.setBaseCon(12);
-                elfWizard.setBaseInt(18); elfWizard.setBaseWis(12); elfWizard.setBaseCha(10);
-                elfWizard.setHitDieType(6);
-                elfWizard.setPrimaryStat("INT");
-                elfWizard.setClassTags("[\"Magical\", \"Scholar\"]");
-                elfWizard.setFlavorQuips("{\"IDLE\": \"So many spells, so little time.\"}");
-                elfWizard.setPortraitUrl("/assets/hero.png");
-                elfWizard.setBaseGoldCost(1000);
-                elfWizard.setBaseGemCost(100);
-
-                characterTemplateRepository.saveAll(List.of(goblinShaman, humanFighter, elfWizard));
+                CharacterTemplate elfWizard = existingTemplates.stream()
+                        .filter(t -> t.getName().equals("Elven Evoker"))
+                        .findFirst()
+                        .orElseGet(() -> {
+                            CharacterTemplate t = new CharacterTemplate();
+                            t.setName("Elven Evoker");
+                            t.setRarity(Rarity.EPIC);
+                            t.setDndClass(DndClass.WIZARD);
+                            t.setBaseStr(8); t.setBaseDex(14); t.setBaseCon(12);
+                            t.setBaseInt(18); t.setBaseWis(12); t.setBaseCha(10);
+                            t.setHitDieType(6);
+                            t.setPrimaryStat("INT");
+                            t.setClassTags("[\"Magical\", \"Scholar\"]");
+                            t.setFlavorQuips("{\"IDLE\": \"So many spells, so little time.\"}");
+                            t.setPortraitUrl("/assets/hero.png");
+                            t.setBaseGoldCost(1000);
+                            t.setBaseGemCost(100);
+                            return characterTemplateRepository.save(t);
+                        });
 
                 // --- Add Templates to the Tavern Recruitment Pool ---
                 RecruitmentPool rp1 = new RecruitmentPool();
