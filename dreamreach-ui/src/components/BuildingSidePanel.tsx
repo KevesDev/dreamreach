@@ -27,6 +27,14 @@ export default function BuildingSidePanel({
                                               fetchProfile
                                           }: BuildingSidePanelProps) {
 
+    // Look up the "live" version of the selected instance from the profile to ensure UI updates in real-time
+    const liveInstance = profile.buildings?.find(b => b.id === selectedInstance?.id);
+    const displayInstance = liveInstance ? {
+        ...liveInstance,
+        maxWorkers: selectedInstance?.maxWorkers || 0,
+        productionRate: selectedInstance?.productionRate || 0
+    } : selectedInstance;
+
     const activeTask = profile?.activeConstructions?.find(
         (t: ConstructionTaskResponse) => t.buildingType === selectedGroup.type
     );
@@ -95,13 +103,13 @@ export default function BuildingSidePanel({
 
     /**
      * Calls the assignment endpoint for a specific physical structure.
+     * Keeps the panel open to allow for multiple sequential assignments.
      */
     const handleAssign = async () => {
-        if (isBusy || !selectedInstance) return;
+        if (isBusy || !displayInstance) return;
         try {
-            await api.post(`/player/building/assign?buildingId=${selectedInstance.id}`);
+            await api.post(`/player/building/assign?buildingId=${displayInstance.id}`);
             fetchProfile();
-            onClose(); // Close and reopen to refresh state, or update local state
         } catch (err: any) {
             alert(err.response?.data || "Failed to assign worker");
         }
@@ -109,13 +117,13 @@ export default function BuildingSidePanel({
 
     /**
      * Calls the removal endpoint for a specific physical structure.
+     * Keeps the panel open to allow for multiple sequential removals.
      */
     const handleRemove = async () => {
-        if (isBusy || !selectedInstance) return;
+        if (isBusy || !displayInstance) return;
         try {
-            await api.post(`/player/building/remove?buildingId=${selectedInstance.id}`);
+            await api.post(`/player/building/remove?buildingId=${displayInstance.id}`);
             fetchProfile();
-            onClose();
         } catch (err: any) {
             alert(err.response?.data || "Failed to remove worker");
         }
@@ -134,9 +142,9 @@ export default function BuildingSidePanel({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                     <h3 style={{ color: 'var(--accent-gold)' }}>
-                        {selectedInstance ? `${selectedGroup.singularName} (Lvl ${selectedInstance.level})` : selectedGroup.name}
+                        {displayInstance ? `${selectedGroup.singularName} (Lvl ${displayInstance.level})` : selectedGroup.name}
                     </h3>
-                    {selectedInstance && selectedGroup.instances.length > 1 && (
+                    {displayInstance && selectedGroup.instances.length > 1 && (
                         <button
                             style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, fontSize: '0.8rem', marginTop: '4px' }}
                             onClick={() => onSelectInstance(null)}
@@ -148,7 +156,7 @@ export default function BuildingSidePanel({
                 <button className="button" style={{ padding: '2px 8px' }} onClick={onClose}>×</button>
             </div>
 
-            {!selectedInstance && (
+            {!displayInstance && (
                 <>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                         {selectedGroup.description}
@@ -247,35 +255,35 @@ export default function BuildingSidePanel({
                 </>
             )}
 
-            {selectedInstance && (
+            {displayInstance && (
                 <>
                     <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
                         <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-md)', color: 'var(--text-muted)' }}>MANAGEMENT</h4>
-                        {selectedInstance.maxWorkers > 0 && (
+                        {displayInstance.maxWorkers > 0 && (
                             <div style={{ marginBottom: 'var(--space-lg)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
                                     <span>Assigned Workers:</span>
-                                    <span style={{ color: 'var(--accent-gold)' }}>{selectedInstance.assignedWorkers} / {selectedInstance.maxWorkers}</span>
+                                    <span style={{ color: 'var(--accent-gold)' }}>{displayInstance.assignedWorkers} / {displayInstance.maxWorkers}</span>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button className="button" style={{ flex: 1 }} disabled={isBusy || selectedInstance.assignedWorkers === 0} onClick={handleRemove}>- Remove</button>
-                                    <button className="button" style={{ flex: 1 }} disabled={isBusy || selectedInstance.assignedWorkers === selectedInstance.maxWorkers || getUnassignedCount(selectedGroup.type) === 0} onClick={handleAssign}>+ Assign</button>
+                                    <button className="button" style={{ flex: 1 }} disabled={isBusy || displayInstance.assignedWorkers === 0} onClick={handleRemove}>- Remove</button>
+                                    <button className="button" style={{ flex: 1 }} disabled={isBusy || displayInstance.assignedWorkers === displayInstance.maxWorkers || getUnassignedCount(selectedGroup.type) === 0} onClick={handleAssign}>+ Assign</button>
                                 </div>
-                                {getUnassignedCount(selectedGroup.type) === 0 && selectedInstance.assignedWorkers < selectedInstance.maxWorkers && (
+                                {getUnassignedCount(selectedGroup.type) === 0 && displayInstance.assignedWorkers < displayInstance.maxWorkers && (
                                     <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>No available {selectedGroup.singularName}s trained.</p>
                                 )}
                             </div>
                         )}
-                        {selectedInstance.productionRate > 0 && (
+                        {displayInstance.productionRate > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-md)' }}>
                                 <span>Current Output:</span>
-                                <span style={{ color: 'var(--success)' }}>+{selectedInstance.assignedWorkers * selectedInstance.productionRate}/hr</span>
+                                <span style={{ color: 'var(--success)' }}>+{displayInstance.assignedWorkers * displayInstance.productionRate}/hr</span>
                             </div>
                         )}
                     </div>
                     <div style={{ marginTop: 'auto' }}>
-                        <button className="button--primary" style={{ width: '100%' }} disabled>UPGRADE TO LV.{selectedInstance.level + 1}</button>
-                        <p style={{ fontSize: '0.7rem', textAlign: 'center', marginTop: 'var(--space-sm)', color: 'var(--text-muted)' }}>{selectedGroup.type === 'keep' ? 'Upgrade requirements Not Met' : `Requires Keep Lvl ${selectedInstance.level + 1}`}</p>
+                        <button className="button--primary" style={{ width: '100%' }} disabled>UPGRADE TO LV.{displayInstance.level + 1}</button>
+                        <p style={{ fontSize: '0.7rem', textAlign: 'center', marginTop: 'var(--space-sm)', color: 'var(--text-muted)' }}>{selectedGroup.type === 'keep' ? 'Upgrade requirements Not Met' : `Requires Keep Lvl ${displayInstance.level + 1}`}</p>
                     </div>
                 </>
             )}
