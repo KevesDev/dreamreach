@@ -18,4 +18,5 @@ public class BuildingConfigResponse {
     private int buildTimeSeconds;
     private int maxWorkers;
     private int productionRate;
+    private int unlockKeepLevel;
 }

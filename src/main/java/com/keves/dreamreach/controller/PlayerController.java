@@ -9,13 +9,8 @@ import com.keves.dreamreach.exception.ResourceNotFoundException;
 import com.keves.dreamreach.repository.ConstructionTaskRepository;
 import com.keves.dreamreach.repository.PlayerAccountRepository;
 import com.keves.dreamreach.repository.TrainingTaskRepository;
-import com.keves.dreamreach.service.ConstructionService;
 import com.keves.dreamreach.service.EconomyService;
-import com.keves.dreamreach.service.RewardService;
 import com.keves.dreamreach.service.TavernService;
-import com.keves.dreamreach.service.TrainingService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,39 +18,32 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Handles the core player profile and dashboard initialization.
+ */
 @RestController
 @RequestMapping("/api/player")
 public class PlayerController {
 
     private final PlayerAccountRepository accountRepository;
     private final GameEconomyConfig economyConfig;
-    private final RewardService rewardService;
     private final EconomyService economyService;
-    private final ConstructionService constructionService;
     private final ConstructionTaskRepository constructionTaskRepository;
-    private final TrainingService trainingService;
     private final TrainingTaskRepository trainingTaskRepository;
     private final TavernService tavernService;
 
     public PlayerController(PlayerAccountRepository accountRepository,
                             GameEconomyConfig economyConfig,
-                            RewardService rewardService,
                             EconomyService economyService,
-                            ConstructionService constructionService,
                             ConstructionTaskRepository constructionTaskRepository,
-                            TrainingService trainingService,
                             TrainingTaskRepository trainingTaskRepository,
                             TavernService tavernService) {
         this.accountRepository = accountRepository;
         this.economyConfig = economyConfig;
-        this.rewardService = rewardService;
         this.economyService = economyService;
-        this.constructionService = constructionService;
         this.constructionTaskRepository = constructionTaskRepository;
-        this.trainingService = trainingService;
         this.trainingTaskRepository = trainingTaskRepository;
         this.tavernService = tavernService;
     }
@@ -138,25 +126,36 @@ public class PlayerController {
                         .stoneCost(economyConfig.getCostHouseStone())
                         .buildTimeSeconds(economyConfig.getBuildTimeHouse())
                         .maxWorkers(0)
-                        .productionRate(0).build(),
+                        .productionRate(0)
+                        .unlockKeepLevel(1).build(),
                 BuildingConfigResponse.builder().buildingType("bakery")
                         .woodCost(economyConfig.getCostBakeryWood())
                         .stoneCost(economyConfig.getCostBakeryStone())
                         .buildTimeSeconds(economyConfig.getBuildTimeBakery())
                         .maxWorkers(economyConfig.getMaxWorkersBakery())
-                        .productionRate(economyConfig.getFoodPerBaker()).build(),
+                        .productionRate(economyConfig.getFoodPerBaker())
+                        .unlockKeepLevel(1).build(),
                 BuildingConfigResponse.builder().buildingType("lodge")
                         .woodCost(economyConfig.getCostLodgeWood())
                         .stoneCost(economyConfig.getCostLodgeStone())
                         .buildTimeSeconds(economyConfig.getBuildTimeLodge())
                         .maxWorkers(economyConfig.getMaxWorkersLodge())
-                        .productionRate(economyConfig.getFoodPerHunter()).build(),
+                        .productionRate(economyConfig.getFoodPerHunter())
+                        .unlockKeepLevel(1).build(),
                 BuildingConfigResponse.builder().buildingType("tower")
                         .woodCost(economyConfig.getCostTowerWood())
                         .stoneCost(economyConfig.getCostTowerStone())
                         .buildTimeSeconds(economyConfig.getBuildTimeTower())
                         .maxWorkers(0)
-                        .productionRate(0).build()
+                        .productionRate(0)
+                        .unlockKeepLevel(1).build(),
+                BuildingConfigResponse.builder().buildingType("tavern")
+                        .woodCost(economyConfig.getCostTavernWood())
+                        .stoneCost(economyConfig.getCostTavernStone())
+                        .buildTimeSeconds(economyConfig.getBuildTimeTavern())
+                        .maxWorkers(0)
+                        .productionRate(0)
+                        .unlockKeepLevel(economyConfig.getTavernUnlockLevel()).build()
         );
 
         PlayerProfileResponse response = PlayerProfileResponse.builder()
@@ -207,137 +206,5 @@ public class PlayerController {
                 .build();
 
         return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Endpoint to assign a trained professional to a specific structure.
-     */
-    @PostMapping("/building/assign")
-    public ResponseEntity<?> assignWorker(Authentication authentication, @RequestParam String buildingId) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-        try {
-            economyService.assignWorker(account.getProfile(), UUID.fromString(buildingId));
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    /**
-     * Endpoint to remove a worker from a specific structure.
-     */
-    @PostMapping("/building/remove")
-    public ResponseEntity<?> removeWorker(Authentication authentication, @RequestParam String buildingId) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-        try {
-            economyService.removeWorker(account.getProfile(), UUID.fromString(buildingId));
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PostMapping("/claim")
-    public ResponseEntity<?> claimResources(Authentication authentication) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
-        economyService.claimResources(account.getProfile());
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/reward/claim")
-    public ResponseEntity<?> claimDailyReward(Authentication authentication) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
-        try {
-            rewardService.claimReward(account);
-            return ResponseEntity.ok().build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PostMapping("/construct")
-    public ResponseEntity<?> startConstruction(Authentication authentication, @RequestParam String buildingType) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
-        try {
-            constructionService.startConstruction(account.getProfile(), buildingType);
-            return ResponseEntity.ok().build();
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PostMapping("/construct/complete")
-    public ResponseEntity<?> completeConstruction(Authentication authentication, @RequestParam String buildingType) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
-        try {
-            constructionService.completeConstruction(account.getProfile(), buildingType);
-            return ResponseEntity.ok().build();
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PostMapping("/train")
-    public ResponseEntity<?> queueTraining(Authentication authentication,
-                                           @RequestParam String profession,
-                                           @RequestParam int quantity) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
-        try {
-            trainingService.queueTraining(account.getProfile(), profession, quantity);
-            return ResponseEntity.ok().build();
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PostMapping("/train/complete")
-    public ResponseEntity<?> completeTraining(Authentication authentication, @RequestParam String taskId) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
-        try {
-            trainingService.completeTraining(account.getProfile(), taskId);
-            return ResponseEntity.ok().build();
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PostMapping("/taxes/bracket")
-    public ResponseEntity<?> setTaxBracket(Authentication authentication, @RequestParam String bracket) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
-        try {
-            economyService.setTaxBracket(account.getProfile(), bracket);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PostMapping("/taxes/collect")
-    public ResponseEntity<?> collectTaxes(Authentication authentication) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
-        try {
-            economyService.collectTaxes(account.getProfile());
-            return ResponseEntity.ok().build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
     }
 }
