@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface IconProps {
-    name: 'population' | 'food' | 'wood' | 'stone' | 'gold' | 'gems' | 'logout' | 'home' | 'combat' | 'summon' | 'kingdom' | 'filter' | 'inventory' | 'plus' | 'user' | 'health' | 'shop';
+    name: 'population' | 'food' | 'wood' | 'stone' | 'gold' | 'gems' | 'logout' | 'home' | 'combat' | 'summon' | 'kingdom' | 'filter' | 'inventory' | 'plus' | 'user' | 'health' | 'shop' | 'close';
     size?: number;
     className?: string;
     style?: React.CSSProperties;
@@ -24,7 +24,8 @@ const paths = {
     plus: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z",
     user: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z",
     health: "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z",
-    shop: "M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"
+    shop: "M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z",
+    close: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
 };
 
 export const Icon: React.FC<IconProps> = ({ name, size = 20, className, style }) => {
