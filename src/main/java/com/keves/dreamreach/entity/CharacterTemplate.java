@@ -35,6 +35,9 @@ public class CharacterTemplate {
     @Column(name = "name", unique = true, nullable = false, length = 100)
     private String name;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "rarity", nullable = false)
     private Rarity rarity;

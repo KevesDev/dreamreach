@@ -11,6 +11,7 @@ import com.keves.dreamreach.util.DndMathUtility;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Random;
 
@@ -83,6 +84,12 @@ public class GachaService {
         newCharacter.setCurrentLevel(1);
         newCharacter.setCurrentXp(0);
         newCharacter.setStatus("IDLE");
+
+        // --- Step 2.5: Setup Base Vitals and Inherit Flavor ---
+        newCharacter.setMaxHitDice(1);
+        newCharacter.setSpentHitDice(0);
+        newCharacter.setLastRestTick(Instant.now());
+        newCharacter.setDescription(template.getDescription());
 
         // --- Step 3: Transaction Completion ---
         newCharacter = playerCharacterRepository.save(newCharacter);
