@@ -43,9 +43,6 @@ public class MissionService {
         return questRepo.findAll();
     }
 
-    /**
-     * Executes the complex math logic to determine a party's chance of success.
-     */
     public int calculateSuccessChance(List<UUID> characterIds, UUID questId) {
         if (characterIds == null || characterIds.isEmpty()) return 0;
         QuestTemplate quest = questRepo.findById(questId).orElseThrow(() -> new ResourceNotFoundException("Quest not found."));
@@ -91,29 +88,34 @@ public class MissionService {
         for (Map.Entry<String, Integer> entry : targetStats.entrySet()) {
             String stat = entry.getKey().toUpperCase();
             int target = entry.getValue();
-            int partyTotal = 0;
-            for (PlayerCharacter pc : partyMembers) {
-                switch (stat) {
-                    case "STR" -> partyTotal += pc.getTotalStrength();
-                    case "DEX" -> partyTotal += pc.getTotalDexterity();
-                    case "CON" -> partyTotal += pc.getTotalConstitution();
-                    case "INT" -> partyTotal += pc.getTotalIntelligence();
-                    case "WIS" -> partyTotal += pc.getTotalWisdom();
-                    case "CHA" -> partyTotal += pc.getTotalCharisma();
-                }
-            }
+            int partyTotal = getPartyTotalForStat(stat, partyMembers);
             double fulfillment = target > 0 ? ((double) partyTotal / target) * 100.0 : 100.0;
             totalFulfillment += Math.min(100.0, fulfillment);
         }
         return totalFulfillment / statCount;
     }
 
-    @Transactional
-    public void saveParty(String displayName, List<UUID> characterIds) {
-        PlayerProfile profile = profileRepo.findByDisplayName(displayName).orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
-        Party party = partyRepo.findByOwnerId(profile.getId()).stream().findFirst().orElse(new Party());
-        party.setOwner(profile);
-        party.setSlot1Id(null); party.setSlot2Id(null); party.setSlot3Id(null); party.setSlot4Id(null); party.setSlot5Id(null);
+    private int getPartyTotalForStat(String stat, List<PlayerCharacter> partyMembers) {
+        int partyTotal = 0;
+        for (PlayerCharacter pc : partyMembers) {
+            switch (stat) {
+                case "STR" -> partyTotal += pc.getTotalStrength();
+                case "DEX" -> partyTotal += pc.getTotalDexterity();
+                case "CON" -> partyTotal += pc.getTotalConstitution();
+                case "INT" -> partyTotal += pc.getTotalIntelligence();
+                case "WIS" -> partyTotal += pc.getTotalWisdom();
+                case "CHA" -> partyTotal += pc.getTotalCharisma();
+            }
+        }
+        return partyTotal;
+    }
+
+    private void assignPartySlots(Party party, List<UUID> characterIds) {
+        party.setSlot1Id(null);
+        party.setSlot2Id(null);
+        party.setSlot3Id(null);
+        party.setSlot4Id(null);
+        party.setSlot5Id(null);
 
         if (characterIds != null) {
             if (!characterIds.isEmpty()) party.setSlot1Id(characterIds.get(0));
@@ -122,12 +124,18 @@ public class MissionService {
             if (characterIds.size() > 3) party.setSlot4Id(characterIds.get(3));
             if (characterIds.size() > 4) party.setSlot5Id(characterIds.get(4));
         }
+    }
+
+    @Transactional
+    public void saveParty(String displayName, List<UUID> characterIds) {
+        PlayerProfile profile = profileRepo.findByDisplayName(displayName).orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
+        Party party = partyRepo.findByOwnerId(profile.getId()).stream().findFirst().orElse(new Party());
+        party.setOwner(profile);
+
+        assignPartySlots(party, characterIds);
         partyRepo.save(party);
     }
 
-    /**
-     * Dispatches a party on an active expedition.
-     */
     @Transactional
     public void dispatchParty(String displayName, UUID questId, List<UUID> characterIds) {
         if (characterIds == null || characterIds.isEmpty()) throw new IllegalArgumentException("Cannot dispatch an empty party.");
@@ -143,14 +151,9 @@ public class MissionService {
         }
         charRepo.saveAll(characters);
 
-        // Snap a fresh Party instance specifically for this expedition
         Party expeditionParty = new Party();
         expeditionParty.setOwner(profile);
-        if (characterIds.size() > 0) expeditionParty.setSlot1Id(characterIds.get(0));
-        if (characterIds.size() > 1) expeditionParty.setSlot2Id(characterIds.get(1));
-        if (characterIds.size() > 2) expeditionParty.setSlot3Id(characterIds.get(2));
-        if (characterIds.size() > 3) expeditionParty.setSlot4Id(characterIds.get(3));
-        if (characterIds.size() > 4) expeditionParty.setSlot5Id(characterIds.get(4));
+        assignPartySlots(expeditionParty, characterIds);
         partyRepo.save(expeditionParty);
 
         int chance = calculateSuccessChance(characterIds, questId);
@@ -160,21 +163,17 @@ public class MissionService {
         activeMission.setQuestTemplate(quest);
         activeMission.setSuccessChance(chance);
         activeMission.setDispatchTime(Instant.now());
-        // For Sprint 5 testing, hardcoded 4 hours.
-        activeMission.setEndTime(Instant.now().plus(4, ChronoUnit.HOURS));
+
+        int duration = quest.getDurationHours() != null ? quest.getDurationHours() : 4;
+        activeMission.setEndTime(Instant.now().plus(duration, ChronoUnit.HOURS));
 
         activeMissionRepo.save(activeMission);
     }
 
-    /**
-     * Triggers the DM Resolution Engine, then returns remaining active expeditions.
-     */
     @Transactional
     public List<ActiveMissionResponse> getActiveMissions(String displayName) {
         PlayerProfile profile = profileRepo.findByDisplayName(displayName).orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
-
-        resolveCompletedMissions(profile); // Lazy Evaluation Roll
-
+        resolveCompletedMissions(profile);
         List<ActiveMission> remainingMissions = activeMissionRepo.findByPartyOwnerId(profile.getId());
 
         return remainingMissions.stream().map(mission -> {
@@ -200,9 +199,6 @@ public class MissionService {
         }).collect(Collectors.toList());
     }
 
-    /**
-     * The DM Engine. Rolls success, divides XP, applies consequences.
-     */
     @Transactional
     public void resolveCompletedMissions(PlayerProfile profile) {
         List<ActiveMission> missions = activeMissionRepo.findByPartyOwnerId(profile.getId());
@@ -214,29 +210,28 @@ public class MissionService {
             QuestTemplate quest = mission.getQuestTemplate();
             List<PlayerCharacter> characters = getPartyMembers(mission.getParty());
 
-            int roll = random.nextInt(100) + 1; // 1-100
+            int roll = random.nextInt(100) + 1;
             boolean success = roll <= mission.getSuccessChance();
 
             if (success) {
-                profile.setGold(profile.getGold() + (quest.getRewardGold() != null ? quest.getRewardGold() : 0));
-                profile.setGems(profile.getGems() + (quest.getRewardGems() != null ? quest.getRewardGems() : 0));
-                profile.setFood(profile.getFood() + (quest.getRewardFood() != null ? quest.getRewardFood() : 0));
-                profile.setWood(profile.getWood() + (quest.getRewardWood() != null ? quest.getRewardWood() : 0));
-                profile.setStone(profile.getStone() + (quest.getRewardStone() != null ? quest.getRewardStone() : 0));
+                PlayerResources resources = profile.getResources();
+                resources.setGold(resources.getGold() + (quest.getRewardGold() != null ? quest.getRewardGold() : 0));
+                resources.setGems(resources.getGems() + (quest.getRewardGems() != null ? quest.getRewardGems() : 0));
+                resources.setFood(resources.getFood() + (quest.getRewardFood() != null ? quest.getRewardFood() : 0));
+                resources.setWood(resources.getWood() + (quest.getRewardWood() != null ? quest.getRewardWood() : 0));
+                resources.setStone(resources.getStone() + (quest.getRewardStone() != null ? quest.getRewardStone() : 0));
 
                 int xpShare = (quest.getBaseExp() != null && !characters.isEmpty()) ? (quest.getBaseExp() / characters.size()) : 0;
 
                 for (PlayerCharacter pc : characters) {
                     pc.setCurrentXp(pc.getCurrentXp() + xpShare);
                     processLevelUp(pc);
-                    // 10% HP damage for success
                     int dmg = Math.max(1, (int) (pc.getMaxHp() * 0.10));
                     pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - dmg));
                     pc.setStatus("IDLE");
                 }
             } else {
                 for (PlayerCharacter pc : characters) {
-                    // 90% HP damage for failure
                     int dmg = Math.max(1, (int) (pc.getMaxHp() * 0.90));
                     pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - dmg));
                     if (pc.getCurrentHp() == 1) {
@@ -259,9 +254,7 @@ public class MissionService {
             int levelDiff = newLevel - pc.getCurrentLevel();
             int avgHd = (pc.getTemplate().getHitDieType() / 2) + 1;
             int conMod = DndMathUtility.calculateModifier(pc.getTotalConstitution());
-
             int hpGain = Math.max(1, avgHd + conMod) * levelDiff;
-
             pc.setMaxHp(pc.getMaxHp() + hpGain);
             pc.setCurrentHp(pc.getCurrentHp() + hpGain);
             pc.setMaxHitDice(pc.getMaxHitDice() + levelDiff);

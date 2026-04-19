@@ -38,11 +38,11 @@ public class QuestTemplate {
     @Column(name = "disadvantage_classes_json", columnDefinition = "TEXT")
     private String disadvantageClassesJson;
 
-    // --- Loot Tables ---
     @Column(name = "base_exp") private Integer baseExp = 0;
     @Column(name = "reward_gold") private Integer rewardGold = 0;
     @Column(name = "reward_gems") private Integer rewardGems = 0;
     @Column(name = "reward_food") private Integer rewardFood = 0;
     @Column(name = "reward_wood") private Integer rewardWood = 0;
     @Column(name = "reward_stone") private Integer rewardStone = 0;
+    @Column(name = "duration_hours") private Integer durationHours = 4;
 }

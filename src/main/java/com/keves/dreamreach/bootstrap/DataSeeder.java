@@ -91,6 +91,7 @@ public class DataSeeder implements CommandLineRunner {
                 q1.setAdvantageClassesJson("[\"FIGHTER\"]");
                 q1.setDisadvantageClassesJson("[\"BARD\", \"CLERIC\"]");
                 q1.setBaseExp(1500); q1.setRewardGold(500); q1.setRewardFood(200);
+                q1.setDurationHours(1);
                 questTemplateRepository.save(q1);
 
                 QuestTemplate q2 = new QuestTemplate();
@@ -101,6 +102,7 @@ public class DataSeeder implements CommandLineRunner {
                 q2.setAdvantageClassesJson("[\"ROGUE\", \"RANGER\"]");
                 q2.setDisadvantageClassesJson("[\"FIGHTER\", \"PALADIN\"]");
                 q2.setBaseExp(800); q2.setRewardGold(150); q2.setRewardStone(100); q2.setRewardWood(100);
+                q2.setDurationHours(2);
                 questTemplateRepository.save(q2);
 
                 System.out.println("Quest Templates seeded successfully!");
