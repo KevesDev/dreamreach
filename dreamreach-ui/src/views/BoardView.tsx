@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/client';
-import { Quest } from './MissionsView';
+import type { Quest } from './MissionsView';
 import './BoardView.css';
 
 export default function BoardView() {
