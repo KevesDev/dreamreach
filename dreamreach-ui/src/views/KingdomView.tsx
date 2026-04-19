@@ -50,6 +50,7 @@ export interface BuildingInstance {
 
 export interface PlayerProfile {
     displayName: string;
+    isAdmin: boolean;
     totalPopulation: number;
     maxPopulation: number;
     idlePeasants: number;
@@ -103,7 +104,7 @@ export interface BuildingGroup {
     cost?: BuildingCost;
     instances: BuildingInstance[];
     isActionReady?: boolean;
-    unlockKeepLevel: number; // Added to resolve TS2339
+    unlockKeepLevel: number;
 }
 
 export interface KingdomEvent {
@@ -128,7 +129,7 @@ export default function KingdomView() {
     const { profile, fetchProfile } = useOutletContext<{ profile: PlayerProfile, fetchProfile: () => void }>();
 
     const [activeTab, setActiveTab] = useState<'buildings' | 'citizens'>('buildings');
-    const [selectedGroup, setSelectedGroup] = useState<BuildingGroup | null>(null);
+    const [selectedGroupType, setSelectedGroupType] = useState<string | null>(null);
     const [selectedInstance, setSelectedInstance] = useState<BuildingInstance | null>(null);
     const [isBusy, setIsBusy] = useState(false);
     const [now, setNow] = useState(Date.now());
@@ -163,7 +164,7 @@ export default function KingdomView() {
     const handleTabChange = (tab: 'buildings' | 'citizens') => {
         setActiveTab(tab);
         if (tab === 'citizens') {
-            setSelectedGroup(null);
+            setSelectedGroupType(null);
             setSelectedInstance(null);
         }
     };
@@ -200,7 +201,7 @@ export default function KingdomView() {
             description: 'The central hub of your kingdom. Upgrading it unlocks new tiers of structures.',
             isActionReady: canCollectTaxes,
             instances: mapInstances('keep', null),
-            unlockKeepLevel: 1 // Default fallback for Keep
+            unlockKeepLevel: 1
         },
         {
             type: 'house',
@@ -241,9 +242,12 @@ export default function KingdomView() {
             cost: tavernConfig ? { wood: tavernConfig.woodCost, stone: tavernConfig.stoneCost, timeSeconds: tavernConfig.buildTimeSeconds } : undefined,
             instances: mapInstances('tavern', tavernConfig),
             isActionReady: tavernListing != null, // Show a notification dot if a hero is waiting!
-            unlockKeepLevel: tavernConfig?.unlockKeepLevel || 5
+            unlockKeepLevel: tavernConfig?.unlockKeepLevel ?? 1 // Follow config strictly
         }
     ];
+
+    // Dynamically derive the selected group object from the freshly mapped buildingGroups array
+    const selectedGroup = buildingGroups.find(g => g.type === selectedGroupType) || null;
 
     const events: KingdomEvent[] = [{ id: 'e5', timestamp: '06:00', message: 'A new day dawns over the kingdom.', type: 'neutral' }];
 
@@ -283,7 +287,7 @@ export default function KingdomView() {
 
             // Trigger the Universal Modal with the pulled character!
             setGachaResult(res.data);
-            setSelectedGroup(null); // Close the side panel to focus on the modal
+            setSelectedGroupType(null); // Close the side panel to focus on the modal
         } catch (err: any) {
             alert(err.response?.data || "Failed to recruit hero");
         } finally {
@@ -308,7 +312,7 @@ export default function KingdomView() {
                                 activeConstructions={profile?.activeConstructions}
                                 now={now}
                                 onSelectGroup={(group) => {
-                                    setSelectedGroup(group);
+                                    setSelectedGroupType(group.type);
                                     setSelectedInstance(null);
                                 }}
                             />
@@ -329,7 +333,7 @@ export default function KingdomView() {
                         tavernListing={tavernListing}
                         onRecruit={handleRecruitHero}
                         onClose={() => {
-                            setSelectedGroup(null);
+                            setSelectedGroupType(null);
                             setSelectedInstance(null);
                         }}
                         onSelectInstance={setSelectedInstance}

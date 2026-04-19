@@ -1,5 +1,6 @@
 package com.keves.dreamreach.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,6 +18,8 @@ public class PlayerProfileResponse {
     private String email;
     private String displayName;
     private boolean pvpEnabled;
+
+    @JsonProperty("isAdmin")
     private boolean isAdmin; // Tells the React UI to show the Admin tools
 
     // Resources
@@ -31,11 +34,11 @@ public class PlayerProfileResponse {
     private int woodRate;
     private int stoneRate;
 
-    // Pending amounts for the Ledger
-    private int pendingFood;
-    private int pendingWood;
-    private int pendingStone;
-    private int pendingGold;
+    // Pending amounts for the Ledger. Now doubles to support fractional UI updates.
+    private double pendingFood;
+    private double pendingWood;
+    private double pendingStone;
+    private double pendingGold;
 
     // Tax and Happiness Metrics
     private int happiness;

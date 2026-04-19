@@ -63,11 +63,13 @@ public class PlayerController {
 
         PlayerProfile profile = account.getProfile();
 
+        // Run the "lazy checks" to process offline time for the economy and the Tavern
         economyService.updateProductionState(profile);
         tavernService.processArrivals(profile);
 
         PlayerPopulation pop = profile.getPopulation();
 
+        // Calculate actual keep level
         int keepLevel = profile.getBuildings().stream()
                 .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
                 .mapToInt(BuildingInstance::getLevel)
@@ -83,6 +85,7 @@ public class PlayerController {
         int woodRate = (pop != null ? pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter() : 0) + economyConfig.getBasePassiveWood();
         int stoneRate = (pop != null ? pop.getStoneworkers() * economyConfig.getStonePerStoneworker() : 0) + economyConfig.getBasePassiveStone();
 
+        // Map real database building instances to Response DTOs
         List<BuildingInstanceResponse> buildingResponses = profile.getBuildings().stream()
                 .map(b -> BuildingInstanceResponse.builder()
                         .id(b.getId())
@@ -185,10 +188,11 @@ public class PlayerController {
                 .woodRate(woodRate)
                 .stoneRate(stoneRate)
 
-                .pendingFood(profile.getResources() != null ? (int) profile.getResources().getPendingFood() : 0)
-                .pendingWood(profile.getResources() != null ? (int) profile.getResources().getPendingWood() : 0)
-                .pendingStone(profile.getResources() != null ? (int) profile.getResources().getPendingStone() : 0)
-                .pendingGold(profile.getResources() != null ? (int) profile.getResources().getPendingGold() : 0)
+                // Pass the doubles directly to allow the frontend ticker to process fractions
+                .pendingFood(profile.getResources() != null ? profile.getResources().getPendingFood() : 0)
+                .pendingWood(profile.getResources() != null ? profile.getResources().getPendingWood() : 0)
+                .pendingStone(profile.getResources() != null ? profile.getResources().getPendingStone() : 0)
+                .pendingGold(profile.getResources() != null ? profile.getResources().getPendingGold() : 0)
 
                 .happiness(profile.getHappiness())
                 .maxHappiness(economyConfig.getMaxHappiness())
