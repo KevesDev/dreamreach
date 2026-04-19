@@ -2,6 +2,7 @@ package com.keves.dreamreach.service;
 
 import com.keves.dreamreach.config.GameEconomyConfig;
 import com.keves.dreamreach.dto.DailyReward;
+import com.keves.dreamreach.entity.BuildingInstance;
 import com.keves.dreamreach.entity.PendingReward;
 import com.keves.dreamreach.entity.PlayerAccount;
 import com.keves.dreamreach.entity.PlayerResources;
@@ -104,11 +105,25 @@ public class RewardService {
             throw new IllegalStateException("Reward expired. Please refresh the page.");
         }
 
+        // Calculate storage capacity to enforce the cap during the reward claim
+        int keepLevel = account.getProfile().getBuildings().stream()
+                .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
+                .mapToInt(BuildingInstance::getLevel)
+                .max().orElse(1);
+        int maxStorage = keepLevel * economyConfig.getBaseStoragePerKeepLevel();
+
         PlayerResources resources = account.getProfile().getResources();
-        resources.setFood(resources.getFood() + pending.getPendingFood());
-        resources.setWood(resources.getWood() + pending.getPendingWood());
-        resources.setStone(resources.getStone() + pending.getPendingStone());
-        resources.setGold(resources.getGold() + pending.getPendingGold());
+
+        // Enforce storage caps: calculate how much can actually be added before hitting the ceiling
+        int foodToAdd = Math.max(0, Math.min(pending.getPendingFood(), maxStorage - resources.getFood()));
+        int woodToAdd = Math.max(0, Math.min(pending.getPendingWood(), maxStorage - resources.getWood()));
+        int stoneToAdd = Math.max(0, Math.min(pending.getPendingStone(), maxStorage - resources.getStone()));
+        int goldToAdd = Math.max(0, Math.min(pending.getPendingGold(), maxStorage - resources.getGold()));
+
+        resources.setFood(resources.getFood() + foodToAdd);
+        resources.setWood(resources.getWood() + woodToAdd);
+        resources.setStone(resources.getStone() + stoneToAdd);
+        resources.setGold(resources.getGold() + goldToAdd);
 
         account.setLastClaimDate(Instant.now());
         account.setPendingReward(null);
