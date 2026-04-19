@@ -35,4 +35,10 @@ public class ActiveMission {
 
     @Column(name = "end_time", nullable = false)
     private Instant endTime;
+
+    @Column(name = "is_resolved", nullable = false)
+    private boolean isResolved = false;
+
+    @Column(name = "was_successful", nullable = false)
+    private boolean wasSuccessful = false;
 }

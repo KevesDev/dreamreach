@@ -196,7 +196,7 @@ public class MissionService {
         activeMission.setQuestTemplate(quest);
         activeMission.setSuccessChance(calculateSuccessChance(characterIds, questId));
         activeMission.setDispatchTime(Instant.now());
-        activeMission.setEndTime(Instant.now().plus(quest.getDurationHours() != null ? quest.getDurationHours() : 4, ChronoUnit.HOURS));
+        activeMission.setEndTime(Instant.now().plus(quest.getDurationHours() != null ? quest.getDurationHours() : 2, ChronoUnit.HOURS));
 
         activeMissionRepo.save(activeMission);
         acceptedRepo.delete(accepted);
@@ -223,6 +223,8 @@ public class MissionService {
                     .successChance(mission.getSuccessChance())
                     .dispatchTimeEpoch(mission.getDispatchTime().toEpochMilli())
                     .endTimeEpoch(mission.getEndTime().toEpochMilli())
+                    .isResolved(mission.isResolved())
+                    .wasSuccessful(mission.isWasSuccessful())
                     .partyMembers(snippets)
                     .build();
         }).collect(Collectors.toList());
@@ -234,50 +236,72 @@ public class MissionService {
         Instant now = Instant.now();
 
         for (ActiveMission mission : missions) {
-            if (now.isBefore(mission.getEndTime())) continue;
+            // Only process missions whose timers have expired but aren't flagged as resolved yet
+            if (now.isBefore(mission.getEndTime()) || mission.isResolved()) continue;
 
-            QuestTemplate quest = mission.getQuestTemplate();
-            List<PlayerCharacter> characters = getPartyMembers(mission.getParty());
             boolean success = (random.nextInt(100) + 1) <= mission.getSuccessChance();
+            mission.setResolved(true);
+            mission.setWasSuccessful(success);
+            activeMissionRepo.save(mission);
+        }
+    }
 
-            if (success) {
-                PlayerResources resources = profile.getResources();
-                resources.setGold(resources.getGold() + (quest.getRewardGold() != null ? quest.getRewardGold() : 0));
-                resources.setGems(resources.getGems() + (quest.getRewardGems() != null ? quest.getRewardGems() : 0));
-                resources.setFood(resources.getFood() + (quest.getRewardFood() != null ? quest.getRewardFood() : 0));
-                resources.setWood(resources.getWood() + (quest.getRewardWood() != null ? quest.getRewardWood() : 0));
-                resources.setStone(resources.getStone() + (quest.getRewardStone() != null ? quest.getRewardStone() : 0));
+    @Transactional
+    public void claimMission(UUID missionId, String displayName) {
+        PlayerProfile profile = profileRepo.findByDisplayName(displayName)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
+        ActiveMission mission = activeMissionRepo.findById(missionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Mission not found."));
 
-                int xpShare = (quest.getBaseExp() != null && !characters.isEmpty()) ? (quest.getBaseExp() / characters.size()) : 0;
+        if (!mission.getParty().getOwner().getId().equals(profile.getId())) {
+            throw new IllegalStateException("You do not own this mission.");
+        }
+        if (!mission.isResolved()) {
+            throw new IllegalStateException("This mission has not finished yet.");
+        }
 
-                for (PlayerCharacter pc : characters) {
-                    pc.setCurrentXp(pc.getCurrentXp() + xpShare);
-                    processLevelUp(pc);
-                    pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - Math.max(1, (int) (pc.getMaxHp() * 0.10))));
-                    pc.setStatus("IDLE");
-                }
+        QuestTemplate quest = mission.getQuestTemplate();
+        List<PlayerCharacter> characters = getPartyMembers(mission.getParty());
 
-                CompletedMission cm = new CompletedMission();
-                cm.setProfile(profile);
-                cm.setQuestTemplate(quest);
-                completedRepo.save(cm);
+        if (mission.isWasSuccessful()) {
+            PlayerResources resources = profile.getResources();
+            resources.setGold(resources.getGold() + (quest.getRewardGold() != null ? quest.getRewardGold() : 0));
+            resources.setGems(resources.getGems() + (quest.getRewardGems() != null ? quest.getRewardGems() : 0));
+            resources.setFood(resources.getFood() + (quest.getRewardFood() != null ? quest.getRewardFood() : 0));
+            resources.setWood(resources.getWood() + (quest.getRewardWood() != null ? quest.getRewardWood() : 0));
+            resources.setStone(resources.getStone() + (quest.getRewardStone() != null ? quest.getRewardStone() : 0));
 
-            } else {
-                for (PlayerCharacter pc : characters) {
-                    pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - Math.max(1, (int) (pc.getMaxHp() * 0.90))));
-                    pc.setStatus(pc.getCurrentHp() == 1 ? "KO" : "IDLE");
-                }
+            int xpShare = (quest.getBaseExp() != null && !characters.isEmpty()) ? (quest.getBaseExp() / characters.size()) : 0;
 
-                AcceptedMission am = new AcceptedMission();
-                am.setProfile(profile);
-                am.setQuestTemplate(quest);
-                acceptedRepo.save(am);
+            for (PlayerCharacter pc : characters) {
+                pc.setCurrentXp(pc.getCurrentXp() + xpShare);
+                processLevelUp(pc);
+                pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - Math.max(1, (int) (pc.getMaxHp() * 0.10))));
+                pc.setStatus("IDLE");
             }
 
-            charRepo.saveAll(characters);
-            profileRepo.save(profile);
-            activeMissionRepo.delete(mission);
+            CompletedMission cm = new CompletedMission();
+            cm.setProfile(profile);
+            cm.setQuestTemplate(quest);
+            completedRepo.save(cm);
+        } else {
+            for (PlayerCharacter pc : characters) {
+                pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - Math.max(1, (int) (pc.getMaxHp() * 0.90))));
+                pc.setStatus(pc.getCurrentHp() == 1 ? "KO" : "IDLE");
+            }
+
+            AcceptedMission am = new AcceptedMission();
+            am.setProfile(profile);
+            am.setQuestTemplate(quest);
+            acceptedRepo.save(am);
         }
+
+        charRepo.saveAll(characters);
+        profileRepo.save(profile);
+
+        Party party = mission.getParty();
+        activeMissionRepo.delete(mission);
+        partyRepo.delete(party);
     }
 
     private void processLevelUp(PlayerCharacter pc) {
