@@ -20,6 +20,12 @@ export interface Quest {
     title: string;
     description: string;
     durationHours: number;
+    rewardGold?: number;
+    rewardGems?: number;
+    rewardFood?: number;
+    rewardWood?: number;
+    rewardStone?: number;
+    baseExp?: number;
 }
 
 export interface ActiveMission {
@@ -29,6 +35,8 @@ export interface ActiveMission {
     successChance: number;
     dispatchTimeEpoch: number;
     endTimeEpoch: number;
+    isResolved: boolean;
+    wasSuccessful: boolean;
     partyMembers: { characterId: string; name: string; portraitUrl: string; flavorQuipsJson: string }[];
 }
 
@@ -48,6 +56,10 @@ export default function MissionsView() {
     const [isDispatching, setIsDispatching] = useState(false);
     const [now, setNow] = useState(Date.now());
     const [isResolving, setIsResolving] = useState(false);
+
+    // NEW: Result Modal State
+    const [resultMission, setResultMission] = useState<ActiveMission | null>(null);
+    const [isClaiming, setIsClaiming] = useState(false);
 
     const fetchAllData = useCallback(() => {
         return Promise.all([
@@ -77,8 +89,11 @@ export default function MissionsView() {
         return () => clearInterval(interval);
     }, []);
 
+    // Notification Logic: Check if any mission is ready for claiming
+    const hasUnclaimed = useMemo(() => activeMissions.some(m => m.isResolved), [activeMissions]);
+
     useEffect(() => {
-        const hasExpired = activeMissions.some(m => now >= m.endTimeEpoch);
+        const hasExpired = activeMissions.some(m => now >= m.endTimeEpoch && !m.isResolved);
         if (hasExpired && !isResolving) {
             setIsResolving(true);
             const timer = setTimeout(() => {
@@ -117,6 +132,18 @@ export default function MissionsView() {
             })
             .catch(err => alert("Failed to embark on mission: " + (err.response?.data || err.message)))
             .finally(() => setIsDispatching(false));
+    };
+
+    const handleClaim = (missionId: string) => {
+        setIsClaiming(true);
+        api.post(`/missions/claim/${missionId}`)
+            .then(() => {
+                setResultMission(null);
+                fetchAllData();
+                if (fetchProfile) fetchProfile();
+            })
+            .catch(err => alert("Failed to claim rewards: " + (err.response?.data || err.message)))
+            .finally(() => setIsClaiming(false));
     };
 
     const addToSlot = (char: Character) => {
@@ -163,10 +190,10 @@ export default function MissionsView() {
     return (
         <div className="missions-wrapper">
             <div className="missions-nav">
-                <div className={`missions-tab ${activeTab === 'ASSEMBLY' ? 'active' : ''}`} onClick={() => setActiveTab('ASSEMBLY')}>
+                <div className={`missions-tab ${activeTab === 'ASSEMBLY' ? 'active' : ''} ${hasUnclaimed && activeTab !== 'ASSEMBLY' ? 'glow-pulse-gold' : ''}`} onClick={() => setActiveTab('ASSEMBLY')}>
                     Mission Journal
                 </div>
-                <div className={`missions-tab ${activeTab === 'EXPEDITIONS' ? 'active' : ''}`} onClick={() => setActiveTab('EXPEDITIONS')}>
+                <div className={`missions-tab ${activeTab === 'EXPEDITIONS' ? 'active' : ''} ${hasUnclaimed && activeTab !== 'EXPEDITIONS' ? 'glow-pulse-gold' : ''}`} onClick={() => setActiveTab('EXPEDITIONS')}>
                     Active Missions ({activeMissions.length})
                 </div>
             </div>
@@ -199,7 +226,7 @@ export default function MissionsView() {
                                     <>
                                         <h3 className="quest-details-title">{selectedQuest.title}</h3>
                                         <div className="quest-details-desc">"{selectedQuest.description}"</div>
-                                        <div className={`success-indicator ${successChance >= 80 ? 'success-high' : successChance >= 40 ? 'success-med' : 'success-low'}`}>
+                                        <div className={`success-indicator ${successChance >= 80 ? 'success-high' : successChance >= 40 ? 'success-med' : successChance >= 40 ? 'success-med' : 'success-low'}`}>
                                             Success Chance: {successChance}%
                                         </div>
                                     </>
@@ -260,15 +287,26 @@ export default function MissionsView() {
                             </div>
                         ) : (
                             activeMissions.sort((a,b) => b.dispatchTimeEpoch - a.dispatchTimeEpoch).map(mission => (
-                                <div key={mission.missionId} className="expedition-card">
+                                <div
+                                    key={mission.missionId}
+                                    className={`expedition-card ${mission.isResolved ? (mission.wasSuccessful ? 'resolved-success' : 'resolved-failure') : ''}`}
+                                    onClick={() => mission.isResolved && setResultMission(mission)}
+                                >
                                     <div className="expedition-info">
                                         <h3>{mission.questTitle}</h3>
                                         <p>Type: {mission.questType} | Success Prob: {mission.successChance}%</p>
                                     </div>
 
-                                    <div className="countdown-timer" style={{ color: now > mission.endTimeEpoch ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
-                                        {formatTimeLeft(mission.endTimeEpoch)}
-                                    </div>
+                                    {mission.isResolved ? (
+                                        <div style={{ fontWeight: 'bold', fontSize: '1.2rem', color: mission.wasSuccessful ? 'var(--success)' : 'var(--danger)' }}>
+                                            {mission.wasSuccessful ? 'VICTORY' : 'DEFEAT'}
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center' }}>Click to Claim</div>
+                                        </div>
+                                    ) : (
+                                        <div className="countdown-timer" style={{ color: now > mission.endTimeEpoch ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
+                                            {formatTimeLeft(mission.endTimeEpoch)}
+                                        </div>
+                                    )}
 
                                     <div className="deployed-party">
                                         {mission.partyMembers.map(member => (
@@ -285,6 +323,7 @@ export default function MissionsView() {
                 )}
             </div>
 
+            {/* Dispatch Confirmation Modal */}
             {showModal && (
                 <div className="modal-overlay">
                     <div className="modal-content">
@@ -297,15 +336,60 @@ export default function MissionsView() {
                                 Success Chance: {successChance}%
                             </div>
                             <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                                Duration: {selectedQuest?.durationHours || 4} Hours (XP & Loot awarded upon safe return)
+                                Duration: {selectedQuest?.durationHours || 2} Hours
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                             <button className="button button--danger" onClick={() => setShowModal(false)}>Cancel</button>
                             <button className="button button--claim" onClick={handleDispatch} disabled={isDispatching}>
-                                {isDispatching ? 'Embarking...' : 'Confirm & Embark'}
+                                {isDispatching ? 'Embarking...' : 'Embark'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* NEW: Mission Outcome Result Modal */}
+            {resultMission && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ border: `2px solid ${resultMission.wasSuccessful ? 'var(--success)' : 'var(--danger)'}` }}>
+                        <h1 style={{ color: resultMission.wasSuccessful ? 'var(--success)' : 'var(--danger)', letterSpacing: '0.2em', marginBottom: '10px' }}>
+                            {resultMission.wasSuccessful ? 'VICTORY' : 'MISSION FAILED'}
+                        </h1>
+                        <h3 style={{ color: 'var(--accent-gold)' }}>{resultMission.questTitle}</h3>
+
+                        {resultMission.wasSuccessful ? (
+                            <>
+                                <p style={{ color: 'var(--text-secondary)' }}>The mission was a success! Your heroes return with the following spoils:</p>
+                                <div className="loot-display-grid">
+                                    <div className="loot-item"><Icon name="gold" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.rewardGold || 0}</div>
+                                    <div className="loot-item"><Icon name="gems" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.rewardGems || 0}</div>
+                                    <div className="loot-item"><Icon name="food" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.rewardFood || 0}</div>
+                                    <div className="loot-item"><Icon name="wood" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.rewardWood || 0}</div>
+                                    <div className="loot-item"><Icon name="stone" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.rewardStone || 0}</div>
+                                    <div className="loot-item" style={{ color: 'var(--accent-blue)' }}><Icon name="user" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.baseExp || 0} EXP</div>
+                                </div>
+                            </>
+                        ) : (
+                            <p style={{ color: 'var(--danger)', margin: '20px 0', fontSize: '1.1rem' }}>
+                                Disaster struck! The party was overwhelmed and forced to retreat.
+                            </p>
+                        )}
+
+                        <div className="deployed-party" style={{ justifyContent: 'center', marginBottom: '30px' }}>
+                            {resultMission.partyMembers.map(m => (
+                                <img key={m.characterId} src={m.portraitUrl || '/assets/hero.png'} style={{ width: '40px', borderRadius: '50%', border: '1px solid var(--border-strong)' }} />
+                            ))}
+                        </div>
+
+                        <button
+                            className="button button--claim"
+                            style={{ width: '100%' }}
+                            onClick={() => handleClaim(resultMission.missionId)}
+                            disabled={isClaiming}
+                        >
+                            {isClaiming ? 'Processing...' : 'Claim'}
+                        </button>
                     </div>
                 </div>
             )}

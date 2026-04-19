@@ -62,4 +62,11 @@ public class MissionController {
         PlayerAccount account = accountRepository.findByEmail(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("Account not found."));
         return ResponseEntity.ok(missionService.getActiveMissions(account.getProfile().getDisplayName()));
     }
+
+    @PostMapping("/claim/{missionId}")
+    public ResponseEntity<?> claimMission(@PathVariable UUID missionId, Authentication authentication) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+        missionService.claimMission(missionId, account.getProfile().getDisplayName());
+        return ResponseEntity.ok().build();
+    }
 }

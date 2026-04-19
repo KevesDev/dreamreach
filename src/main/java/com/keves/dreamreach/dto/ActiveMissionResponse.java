@@ -15,6 +15,8 @@ public class ActiveMissionResponse {
     private int successChance;
     private long dispatchTimeEpoch;
     private long endTimeEpoch;
+    private boolean isResolved;
+    private boolean wasSuccessful;
     private List<CharacterSnippet> partyMembers;
 
     @Data
