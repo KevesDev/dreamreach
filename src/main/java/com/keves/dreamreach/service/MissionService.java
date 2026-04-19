@@ -24,23 +24,64 @@ public class MissionService {
     private final PartyRepository partyRepo;
     private final PlayerProfileRepository profileRepo;
     private final ActiveMissionRepository activeMissionRepo;
+    private final AcceptedMissionRepository acceptedRepo;
+    private final CompletedMissionRepository completedRepo;
     private final GameQuestConfig config;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Random random = new Random();
 
     public MissionService(QuestTemplateRepository questRepo, PlayerCharacterRepository charRepo,
                           PartyRepository partyRepo, PlayerProfileRepository profileRepo,
-                          ActiveMissionRepository activeMissionRepo, GameQuestConfig config) {
+                          ActiveMissionRepository activeMissionRepo, AcceptedMissionRepository acceptedRepo,
+                          CompletedMissionRepository completedRepo, GameQuestConfig config) {
         this.questRepo = questRepo;
         this.charRepo = charRepo;
         this.partyRepo = partyRepo;
         this.profileRepo = profileRepo;
         this.activeMissionRepo = activeMissionRepo;
+        this.acceptedRepo = acceptedRepo;
+        this.completedRepo = completedRepo;
         this.config = config;
     }
 
-    public List<QuestTemplate> getAllQuests() {
-        return questRepo.findAll();
+    @Transactional
+    public List<QuestTemplate> getAdventurersBoard(String displayName) {
+        PlayerProfile profile = profileRepo.findByDisplayName(displayName)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
+
+        Set<UUID> excludedIds = new HashSet<>();
+        activeMissionRepo.findByPartyOwnerId(profile.getId()).forEach(m -> excludedIds.add(m.getQuestTemplate().getId()));
+        acceptedRepo.findByProfileId(profile.getId()).forEach(a -> excludedIds.add(a.getQuestTemplate().getId()));
+        completedRepo.findByProfileId(profile.getId()).forEach(c -> excludedIds.add(c.getQuestTemplate().getId()));
+
+        return questRepo.findAll().stream()
+                .filter(q -> !excludedIds.contains(q.getId()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void acceptMission(String displayName, UUID questId) {
+        PlayerProfile profile = profileRepo.findByDisplayName(displayName)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
+        QuestTemplate quest = questRepo.findById(questId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quest not found."));
+
+        boolean alreadyAccepted = acceptedRepo.findByProfileIdAndQuestTemplateId(profile.getId(), questId).isPresent();
+        if (alreadyAccepted) throw new IllegalStateException("Mission already in your Journal.");
+
+        AcceptedMission accepted = new AcceptedMission();
+        accepted.setProfile(profile);
+        accepted.setQuestTemplate(quest);
+        acceptedRepo.save(accepted);
+    }
+
+    @Transactional
+    public List<QuestTemplate> getJournal(String displayName) {
+        PlayerProfile profile = profileRepo.findByDisplayName(displayName)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
+        return acceptedRepo.findByProfileId(profile.getId()).stream()
+                .map(AcceptedMission::getQuestTemplate)
+                .collect(Collectors.toList());
     }
 
     public int calculateSuccessChance(List<UUID> characterIds, UUID questId) {
@@ -67,9 +108,9 @@ public class MissionService {
         }
 
         double baseChance = calculateBaseChance(targetStats, partyMembers);
+
         int advCount = 0;
         int disCount = 0;
-
         for (PlayerCharacter pc : partyMembers) {
             String dndClass = pc.getTemplate().getDndClass().name();
             if (advClasses.contains(dndClass)) advCount++;
@@ -81,9 +122,10 @@ public class MissionService {
     }
 
     private double calculateBaseChance(Map<String, Integer> targetStats, List<PlayerCharacter> partyMembers) {
+        if (targetStats.isEmpty()) return 100.0;
+
         double totalFulfillment = 0;
         int statCount = targetStats.size();
-        if (statCount == 0) return 100.0;
 
         for (Map.Entry<String, Integer> entry : targetStats.entrySet()) {
             String stat = entry.getKey().toUpperCase();
@@ -127,25 +169,18 @@ public class MissionService {
     }
 
     @Transactional
-    public void saveParty(String displayName, List<UUID> characterIds) {
-        PlayerProfile profile = profileRepo.findByDisplayName(displayName).orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
-        Party party = partyRepo.findByOwnerId(profile.getId()).stream().findFirst().orElse(new Party());
-        party.setOwner(profile);
-
-        assignPartySlots(party, characterIds);
-        partyRepo.save(party);
-    }
-
-    @Transactional
     public void dispatchParty(String displayName, UUID questId, List<UUID> characterIds) {
         if (characterIds == null || characterIds.isEmpty()) throw new IllegalArgumentException("Cannot dispatch an empty party.");
         PlayerProfile profile = profileRepo.findByDisplayName(displayName).orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
         QuestTemplate quest = questRepo.findById(questId).orElseThrow(() -> new ResourceNotFoundException("Quest not found."));
 
+        AcceptedMission accepted = acceptedRepo.findByProfileIdAndQuestTemplateId(profile.getId(), questId)
+                .orElseThrow(() -> new IllegalStateException("You must accept this mission into your Journal first."));
+
         List<PlayerCharacter> characters = charRepo.findAllById(characterIds);
         for (PlayerCharacter pc : characters) {
             if (!"IDLE".equalsIgnoreCase(pc.getStatus())) {
-                throw new IllegalStateException("Character " + pc.getTemplate().getName() + " is not available for dispatch.");
+                throw new IllegalStateException("Character " + pc.getTemplate().getName() + " is not IDLE.");
             }
             pc.setStatus("MISSION");
         }
@@ -156,27 +191,22 @@ public class MissionService {
         assignPartySlots(expeditionParty, characterIds);
         partyRepo.save(expeditionParty);
 
-        int chance = calculateSuccessChance(characterIds, questId);
-
         ActiveMission activeMission = new ActiveMission();
         activeMission.setParty(expeditionParty);
         activeMission.setQuestTemplate(quest);
-        activeMission.setSuccessChance(chance);
+        activeMission.setSuccessChance(calculateSuccessChance(characterIds, questId));
         activeMission.setDispatchTime(Instant.now());
-
-        int duration = quest.getDurationHours() != null ? quest.getDurationHours() : 4;
-        activeMission.setEndTime(Instant.now().plus(duration, ChronoUnit.HOURS));
+        activeMission.setEndTime(Instant.now().plus(quest.getDurationHours() != null ? quest.getDurationHours() : 4, ChronoUnit.HOURS));
 
         activeMissionRepo.save(activeMission);
+        acceptedRepo.delete(accepted);
     }
 
     @Transactional
     public List<ActiveMissionResponse> getActiveMissions(String displayName) {
         PlayerProfile profile = profileRepo.findByDisplayName(displayName).orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
         resolveCompletedMissions(profile);
-        List<ActiveMission> remainingMissions = activeMissionRepo.findByPartyOwnerId(profile.getId());
-
-        return remainingMissions.stream().map(mission -> {
+        return activeMissionRepo.findByPartyOwnerId(profile.getId()).stream().map(mission -> {
             List<PlayerCharacter> partyMembers = getPartyMembers(mission.getParty());
             List<ActiveMissionResponse.CharacterSnippet> snippets = partyMembers.stream()
                     .map(pc -> ActiveMissionResponse.CharacterSnippet.builder()
@@ -184,8 +214,7 @@ public class MissionService {
                             .name(pc.getTemplate().getName())
                             .portraitUrl(pc.getTemplate().getPortraitUrl())
                             .flavorQuipsJson(pc.getTemplate().getFlavorQuips())
-                            .build())
-                    .collect(Collectors.toList());
+                            .build()).collect(Collectors.toList());
 
             return ActiveMissionResponse.builder()
                     .missionId(mission.getId())
@@ -209,9 +238,7 @@ public class MissionService {
 
             QuestTemplate quest = mission.getQuestTemplate();
             List<PlayerCharacter> characters = getPartyMembers(mission.getParty());
-
-            int roll = random.nextInt(100) + 1;
-            boolean success = roll <= mission.getSuccessChance();
+            boolean success = (random.nextInt(100) + 1) <= mission.getSuccessChance();
 
             if (success) {
                 PlayerResources resources = profile.getResources();
@@ -226,20 +253,25 @@ public class MissionService {
                 for (PlayerCharacter pc : characters) {
                     pc.setCurrentXp(pc.getCurrentXp() + xpShare);
                     processLevelUp(pc);
-                    int dmg = Math.max(1, (int) (pc.getMaxHp() * 0.10));
-                    pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - dmg));
+                    pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - Math.max(1, (int) (pc.getMaxHp() * 0.10))));
                     pc.setStatus("IDLE");
                 }
+
+                CompletedMission cm = new CompletedMission();
+                cm.setProfile(profile);
+                cm.setQuestTemplate(quest);
+                completedRepo.save(cm);
+
             } else {
                 for (PlayerCharacter pc : characters) {
-                    int dmg = Math.max(1, (int) (pc.getMaxHp() * 0.90));
-                    pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - dmg));
-                    if (pc.getCurrentHp() == 1) {
-                        pc.setStatus("KO");
-                    } else {
-                        pc.setStatus("IDLE");
-                    }
+                    pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - Math.max(1, (int) (pc.getMaxHp() * 0.90))));
+                    pc.setStatus(pc.getCurrentHp() == 1 ? "KO" : "IDLE");
                 }
+
+                AcceptedMission am = new AcceptedMission();
+                am.setProfile(profile);
+                am.setQuestTemplate(quest);
+                acceptedRepo.save(am);
             }
 
             charRepo.saveAll(characters);
@@ -252,9 +284,7 @@ public class MissionService {
         int newLevel = DndMathUtility.calculateLevelFromXp(pc.getCurrentXp());
         if (newLevel > pc.getCurrentLevel()) {
             int levelDiff = newLevel - pc.getCurrentLevel();
-            int avgHd = (pc.getTemplate().getHitDieType() / 2) + 1;
-            int conMod = DndMathUtility.calculateModifier(pc.getTotalConstitution());
-            int hpGain = Math.max(1, avgHd + conMod) * levelDiff;
+            int hpGain = Math.max(1, ((pc.getTemplate().getHitDieType() / 2) + 1) + DndMathUtility.calculateModifier(pc.getTotalConstitution())) * levelDiff;
             pc.setMaxHp(pc.getMaxHp() + hpGain);
             pc.setCurrentHp(pc.getCurrentHp() + hpGain);
             pc.setMaxHitDice(pc.getMaxHitDice() + levelDiff);

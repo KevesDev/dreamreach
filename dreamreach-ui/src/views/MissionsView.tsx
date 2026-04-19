@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import api from '../api/client';
 import { Icon } from '../components/Icon';
 import './MissionsView.css';
@@ -52,13 +52,17 @@ export default function MissionsView() {
     const fetchAllData = useCallback(() => {
         return Promise.all([
             api.get('/roster'),
-            api.get('/missions/quests'),
+            api.get('/missions/journal'), // Pulling exclusively from AcceptedMissions
             api.get('/missions/active')
         ]).then(([rosterRes, questsRes, activeRes]) => {
             setRoster(rosterRes.data);
             setQuests(questsRes.data);
             setActiveMissions(activeRes.data);
-            setSelectedQuestId(prev => (!prev && questsRes.data.length > 0) ? questsRes.data[0].id : prev);
+            setSelectedQuestId(prev => {
+                if (!prev && questsRes.data.length > 0) return questsRes.data[0].id;
+                if (prev && !questsRes.data.find((q: Quest) => q.id === prev)) return questsRes.data.length > 0 ? questsRes.data[0].id : null;
+                return prev;
+            });
         }).catch(err => {
             console.error("Failed to load missions data", err);
         });
@@ -91,19 +95,14 @@ export default function MissionsView() {
             setSuccessChance(0);
             return;
         }
-
         const activeCharacterIds = partySlots.filter(slot => slot !== null).map(slot => slot!.characterId);
         if (activeCharacterIds.length === 0) {
             setSuccessChance(0);
             return;
         }
-
-        api.post('/missions/party/calculate', {
-            characterIds: activeCharacterIds,
-            questId: selectedQuestId
-        }).then(res => {
-            setSuccessChance(res.data.successChance);
-        }).catch(() => setSuccessChance(0));
+        api.post('/missions/party/calculate', { characterIds: activeCharacterIds, questId: selectedQuestId })
+            .then(res => setSuccessChance(res.data.successChance))
+            .catch(() => setSuccessChance(0));
     }, [partySlots, selectedQuestId, activeTab]);
 
     const handleDispatch = () => {
@@ -142,12 +141,6 @@ export default function MissionsView() {
 
     const selectedQuest = quests.find(q => q.id === selectedQuestId);
 
-    const getSuccessColorClass = () => {
-        if (successChance >= 80) return 'success-high';
-        if (successChance >= 40) return 'success-med';
-        return 'success-low';
-    };
-
     const formatTimeLeft = (endTimeMs: number) => {
         const diff = Math.max(0, endTimeMs - now);
         if (diff === 0) return "Resolving...";
@@ -162,18 +155,16 @@ export default function MissionsView() {
         try {
             const obj = JSON.parse(jsonString);
             return obj.MISSION || obj.IDLE || "Ready for the journey.";
-        } catch {
-            return "Ready for the journey.";
-        }
+        } catch { return "Ready for the journey."; }
     };
 
-    if (loading) return <div className="panel" style={{ margin: 'var(--space-md)' }}>Loading Mission Board...</div>;
+    if (loading) return <div className="panel" style={{ margin: 'var(--space-md)' }}>Loading Mission Journal...</div>;
 
     return (
         <div className="missions-wrapper">
             <div className="missions-nav">
                 <div className={`missions-tab ${activeTab === 'ASSEMBLY' ? 'active' : ''}`} onClick={() => setActiveTab('ASSEMBLY')}>
-                    Mission Board
+                    Mission Journal
                 </div>
                 <div className={`missions-tab ${activeTab === 'EXPEDITIONS' ? 'active' : ''}`} onClick={() => setActiveTab('EXPEDITIONS')}>
                     Active Missions ({activeMissions.length})
@@ -185,25 +176,36 @@ export default function MissionsView() {
                     <>
                         <aside className="ledger-pane">
                             <div className="ledger-header">
-                                <h2>Mission Board</h2>
+                                <h2>Mission Journal</h2>
                             </div>
-                            <div className="quest-list">
-                                {quests.map(quest => (
-                                    <div key={quest.id} className={`quest-card ${selectedQuestId === quest.id ? 'selected' : ''}`} data-type={quest.type} onClick={() => setSelectedQuestId(quest.id)}>
-                                        <div className="quest-card-title">{quest.title}</div>
-                                        <div className="quest-card-type">{quest.type}</div>
-                                    </div>
-                                ))}
-                            </div>
+
+                            {quests.length === 0 ? (
+                                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                    <p>Your journal is empty.</p>
+                                    <Link to="/board" className="button" style={{display: 'inline-block', marginTop: '10px'}}>Visit Adventurer's Board</Link>
+                                </div>
+                            ) : (
+                                <div className="quest-list">
+                                    {quests.map(quest => (
+                                        <div key={quest.id} className={`quest-card ${selectedQuestId === quest.id ? 'selected' : ''}`} data-type={quest.type} onClick={() => setSelectedQuestId(quest.id)}>
+                                            <div className="quest-card-title">{quest.title}</div>
+                                            <div className="quest-card-type">{quest.type}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             <div className="quest-details-panel">
                                 {selectedQuest ? (
                                     <>
                                         <h3 className="quest-details-title">{selectedQuest.title}</h3>
                                         <div className="quest-details-desc">"{selectedQuest.description}"</div>
-                                        <div className={`success-indicator ${getSuccessColorClass()}`}>Success Chance: {successChance}%</div>
+                                        <div className={`success-indicator ${successChance >= 80 ? 'success-high' : successChance >= 40 ? 'success-med' : 'success-low'}`}>
+                                            Success Chance: {successChance}%
+                                        </div>
                                     </>
                                 ) : (
-                                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', margin: 'auto 0' }}>Select a mission.</div>
+                                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', margin: 'auto 0' }}>Select a mission from your journal.</div>
                                 )}
                             </div>
                         </aside>
@@ -255,7 +257,7 @@ export default function MissionsView() {
                             <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '40px' }}>
                                 <Icon name="kingdom" size={48} />
                                 <h2>No Active Missions</h2>
-                                <p>Your heroes rest. Assemble a party and embark from the Mission Board.</p>
+                                <p>Your heroes rest. Assemble a party and embark from the Mission Journal.</p>
                             </div>
                         ) : (
                             activeMissions.sort((a,b) => b.dispatchTimeEpoch - a.dispatchTimeEpoch).map(mission => (
@@ -292,7 +294,7 @@ export default function MissionsView() {
                             Are you sure you want to send this party on <strong>{selectedQuest?.title}</strong>?
                         </p>
                         <div style={{ background: 'var(--surface-2)', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: getSuccessColorClass() === 'success-high' ? 'var(--success)' : getSuccessColorClass() === 'success-med' ? 'var(--warning)' : 'var(--danger)' }}>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: successChance >= 80 ? 'var(--success)' : successChance >= 40 ? 'var(--warning)' : 'var(--danger)' }}>
                                 Success Chance: {successChance}%
                             </div>
                             <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '8px' }}>

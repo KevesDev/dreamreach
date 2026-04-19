@@ -12,16 +12,12 @@ interface CitizenDashboardProps {
 
 export default function CitizenDashboard({ profile, now, fetchProfile }: CitizenDashboardProps) {
     const [isBusy, setIsBusy] = useState(false);
-    const [completingTasks, setCompletingTasks] = useState<Set<string>>(new Set());
     const [quantities, setQuantities] = useState<Record<string, number>>({
         woodcutter: 1, stoneworker: 1, hunter: 1, baker: 1
     });
 
-    // Dynamically retrieve the config sent by the backend
     const getConfig = (type: string) => profile?.trainingConfigs?.find(c => c.professionType === type);
 
-    // Added 'as const' to the icons so TypeScript strict-mode correctly infers them as explicit literals,
-    // and updated the woodcutter icon from 'tree' to 'wood' to match the Icon component props.
     const professions = [
         { type: 'woodcutter', name: 'Woodcutter', icon: 'wood' as const, count: profile?.woodcutters || 0, config: getConfig('woodcutter') },
         { type: 'stoneworker', name: 'Stoneworker', icon: 'stone' as const, count: profile?.stoneworkers || 0, config: getConfig('stoneworker') },
@@ -30,23 +26,19 @@ export default function CitizenDashboard({ profile, now, fetchProfile }: Citizen
     ];
 
     const trainedTotal = professions.reduce((sum, p) => sum + p.count, 0);
+    // Explicit UI derivation to expose the population void
+    const inTrainingTotal = Math.max(0, (profile?.totalPopulation || 0) - ((profile?.idlePeasants || 0) + trainedTotal));
 
-    // Automatically complete tasks when their timer expires
+    // Debounced Refresh to allow the Backend Lazy Evaluation engine to securely process the save state
     useEffect(() => {
-        profile?.activeTrainingTasks?.forEach(task => {
-            if (now >= task.completionTimeEpoch && !completingTasks.has(task.id)) {
-                setCompletingTasks(prev => new Set(prev).add(task.id));
-                api.post(`/player/train/complete?taskId=${task.id}`).then(() => {
-                    fetchProfile();
-                    setCompletingTasks(prev => {
-                        const next = new Set(prev);
-                        next.delete(task.id);
-                        return next;
-                    });
-                }).catch(err => console.error("Failed to complete training task", err));
-            }
-        });
-    }, [now, profile?.activeTrainingTasks, completingTasks, fetchProfile]);
+        const hasCompletedTask = profile?.activeTrainingTasks?.some(task => now >= task.completionTimeEpoch);
+        if (hasCompletedTask) {
+            const timer = setTimeout(() => {
+                fetchProfile();
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [now, profile?.activeTrainingTasks, fetchProfile]);
 
     const handleQtyChange = (type: string, delta: number) => {
         setQuantities(prev => ({
@@ -62,7 +54,6 @@ export default function CitizenDashboard({ profile, now, fetchProfile }: Citizen
         try {
             await api.post(`/player/train?profession=${profession}&quantity=${qty}`);
             fetchProfile();
-            // Reset quantity back to 1 after successful queue
             setQuantities(prev => ({ ...prev, [profession]: 1 }));
         } catch (err: any) {
             alert(err.response?.data || "Failed to start training.");
@@ -75,7 +66,6 @@ export default function CitizenDashboard({ profile, now, fetchProfile }: Citizen
         const tasks = profile?.activeTrainingTasks?.filter(t => t.professionType === type) || [];
         if (tasks.length === 0) return null;
 
-        // Find the task that is active RIGHT NOW, or the next upcoming one
         const activeTask = tasks.find(t => now >= t.startTimeEpoch && now <= t.completionTimeEpoch) || tasks[0];
         const futureCount = tasks.length - (now >= activeTask.startTimeEpoch ? 1 : 0);
 
@@ -116,6 +106,10 @@ export default function CitizenDashboard({ profile, now, fetchProfile }: Citizen
                 <div className="roster-stat-card">
                     <h4>Peasants (Idle)</h4>
                     <div className="roster-stat-value idle-color">{profile?.idlePeasants || 0}</div>
+                </div>
+                <div className="roster-stat-card">
+                    <h4>In Training</h4>
+                    <div className="roster-stat-value" style={{ color: 'var(--warning)' }}>{inTrainingTotal}</div>
                 </div>
                 <div className="roster-stat-card">
                     <h4>Professionals</h4>

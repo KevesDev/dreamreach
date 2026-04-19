@@ -1,10 +1,6 @@
 package com.keves.dreamreach.controller;
 
-import com.keves.dreamreach.dto.ActiveMissionResponse;
-import com.keves.dreamreach.dto.MissionDispatchRequest;
-import com.keves.dreamreach.dto.PartyCalculateRequest;
-import com.keves.dreamreach.dto.PartyCalculateResponse;
-import com.keves.dreamreach.dto.PartySaveRequest;
+import com.keves.dreamreach.dto.*;
 import com.keves.dreamreach.entity.PlayerAccount;
 import com.keves.dreamreach.entity.QuestTemplate;
 import com.keves.dreamreach.exception.ResourceNotFoundException;
@@ -15,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/missions")
@@ -28,22 +25,29 @@ public class MissionController {
         this.accountRepository = accountRepository;
     }
 
-    @GetMapping("/quests")
-    public ResponseEntity<List<QuestTemplate>> getAllQuests() {
-        return ResponseEntity.ok(missionService.getAllQuests());
+    @GetMapping("/board")
+    public ResponseEntity<List<QuestTemplate>> getBoard(Authentication authentication) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+        return ResponseEntity.ok(missionService.getAdventurersBoard(account.getProfile().getDisplayName()));
+    }
+
+    @PostMapping("/accept/{questId}")
+    public ResponseEntity<?> acceptMission(@PathVariable UUID questId, Authentication authentication) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+        missionService.acceptMission(account.getProfile().getDisplayName(), questId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/journal")
+    public ResponseEntity<List<QuestTemplate>> getJournal(Authentication authentication) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+        return ResponseEntity.ok(missionService.getJournal(account.getProfile().getDisplayName()));
     }
 
     @PostMapping("/party/calculate")
     public ResponseEntity<PartyCalculateResponse> calculate(@RequestBody PartyCalculateRequest request) {
         int chance = missionService.calculateSuccessChance(request.getCharacterIds(), request.getQuestId());
         return ResponseEntity.ok(new PartyCalculateResponse(chance));
-    }
-
-    @PostMapping("/party/save")
-    public ResponseEntity<?> saveParty(@RequestBody PartySaveRequest request, Authentication authentication) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-        missionService.saveParty(account.getProfile().getDisplayName(), request.getCharacterIds());
-        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/dispatch")

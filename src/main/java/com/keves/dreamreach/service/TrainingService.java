@@ -12,11 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
-/**
- * Handles the logic and sequential queuing for Citizen Management.
- */
 @Service
 public class TrainingService {
 
@@ -37,133 +33,105 @@ public class TrainingService {
 
     @Transactional
     public void queueTraining(PlayerProfile profile, String profession, int quantity) {
-        if (quantity <= 0) {
-            throw new IllegalArgumentException("Must train at least 1 peasant.");
-        }
-
-        // 1. Force a state flush so pending resources don't get lost
+        if (quantity <= 0) throw new IllegalArgumentException("Must train at least 1 peasant.");
         economyService.updateProductionState(profile);
 
         PlayerPopulation pop = profile.getPopulation();
-        if (pop.getIdlePeasants() < quantity) {
-            throw new IllegalStateException("You do not have enough Idle Peasants to train.");
-        }
+        if (pop.getIdlePeasants() < quantity) throw new IllegalStateException("Not enough Idle Peasants.");
 
-        // 2. Dynamically determine the per-unit cost and time based on the profession
-        int unitGoldCost = 0;
-        int unitFoodCost = 0;
-        int unitTrainTimeSeconds = 0;
+        int unitGoldCost;
+        int unitFoodCost;
+        int unitTrainTimeSeconds;
 
         switch (profession.toLowerCase()) {
-            case "woodcutter":
+            case "woodcutter" -> {
                 unitGoldCost = config.getCostTrainWoodcutterGold();
                 unitFoodCost = config.getCostTrainWoodcutterFood();
                 unitTrainTimeSeconds = config.getTrainTimeWoodcutterSeconds();
-                break;
-            case "stoneworker":
+            }
+            case "stoneworker" -> {
                 unitGoldCost = config.getCostTrainStoneworkerGold();
                 unitFoodCost = config.getCostTrainStoneworkerFood();
                 unitTrainTimeSeconds = config.getTrainTimeStoneworkerSeconds();
-                break;
-            case "hunter":
+            }
+            case "hunter" -> {
                 unitGoldCost = config.getCostTrainHunterGold();
                 unitFoodCost = config.getCostTrainHunterFood();
                 unitTrainTimeSeconds = config.getTrainTimeHunterSeconds();
-                break;
-            case "baker":
+            }
+            case "baker" -> {
                 unitGoldCost = config.getCostTrainBakerGold();
                 unitFoodCost = config.getCostTrainBakerFood();
                 unitTrainTimeSeconds = config.getTrainTimeBakerSeconds();
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown profession type: " + profession);
+            }
+            default -> throw new IllegalArgumentException("Unknown profession.");
         }
-
-        int totalGoldCost = unitGoldCost * quantity;
-        int totalFoodCost = unitFoodCost * quantity;
 
         PlayerResources res = profile.getResources();
-        if (res.getGold() < totalGoldCost || res.getFood() < totalFoodCost) {
-            throw new IllegalStateException("Not enough resources to train these peasants.");
+        if (res.getGold() < (unitGoldCost * quantity) || res.getFood() < (unitFoodCost * quantity)) {
+            throw new IllegalStateException("Not enough resources.");
         }
 
-        // 3. Deduct resources and shift the peasants from 'Idle' to 'In Training'
-        res.setGold(res.getGold() - totalGoldCost);
-        res.setFood(res.getFood() - totalFoodCost);
+        res.setGold(res.getGold() - (unitGoldCost * quantity));
+        res.setFood(res.getFood() - (unitFoodCost * quantity));
         pop.setIdlePeasants(pop.getIdlePeasants() - quantity);
         pop.setInTraining(pop.getInTraining() + quantity);
 
-        // 4. Sequential Queuing Logic: Find the latest completion time of existing tasks
         List<TrainingTask> existingTasks = taskRepository.findByProfileIdOrderByStartTimeAsc(profile.getId());
         Instant lastCompletion = Instant.now();
-
         if (!existingTasks.isEmpty()) {
-            Instant highestExistingTime = existingTasks.get(existingTasks.size() - 1).getCompletionTime();
-            if (highestExistingTime.isAfter(lastCompletion)) {
-                lastCompletion = highestExistingTime;
+            Instant highestTime = existingTasks.getLast().getCompletionTime();
+            if (highestTime.isAfter(lastCompletion)) {
+                lastCompletion = highestTime;
             }
         }
 
-        // 5. Generate individual tasks stacked back-to-back using the specific profession's timer
         for (int i = 0; i < quantity; i++) {
-            Instant start = lastCompletion;
-            Instant end = start.plusSeconds(unitTrainTimeSeconds);
-
+            Instant end = lastCompletion.plusSeconds(unitTrainTimeSeconds);
             TrainingTask task = new TrainingTask();
             task.setProfile(profile);
             task.setProfessionType(profession.toLowerCase());
-            task.setStartTime(start);
+            task.setStartTime(lastCompletion);
             task.setCompletionTime(end);
             taskRepository.save(task);
-
-            // The next unit in the loop starts exactly when this one finishes
             lastCompletion = end;
         }
-
         profileRepository.save(profile);
     }
 
     @Transactional
-    public void completeTraining(PlayerProfile profile, String taskId) {
-        TrainingTask task = taskRepository.findById(UUID.fromString(taskId))
-                .orElseThrow(() -> new IllegalStateException("Training task not found."));
-
-        // Security check
-        if (!task.getProfile().getId().equals(profile.getId())) {
-            throw new IllegalStateException("You do not own this training task.");
-        }
-
-        if (Instant.now().isBefore(task.getCompletionTime())) {
-            throw new IllegalStateException("This peasant has not finished training yet.");
-        }
-
+    public void processCompletedTraining(PlayerProfile profile) {
+        List<TrainingTask> tasks = taskRepository.findByProfileIdOrderByStartTimeAsc(profile.getId());
+        Instant now = Instant.now();
         PlayerPopulation pop = profile.getPopulation();
+        boolean changed = false;
 
-        // Safety check to ensure we don't drop below zero if something desynced
-        if (pop.getInTraining() > 0) {
-            pop.setInTraining(pop.getInTraining() - 1);
+        int activeCount = 0;
+        for (TrainingTask task : tasks) {
+            if (now.isBefore(task.getCompletionTime())) {
+                activeCount++;
+                continue;
+            }
+            switch (task.getProfessionType().toLowerCase()) {
+                case "woodcutter" -> pop.setWoodcutters(pop.getWoodcutters() + 1);
+                case "stoneworker" -> pop.setStoneworkers(pop.getStoneworkers() + 1);
+                case "hunter" -> pop.setHunters(pop.getHunters() + 1);
+                case "baker" -> pop.setBakers(pop.getBakers() + 1);
+            }
+            taskRepository.delete(task);
+            changed = true;
         }
 
-        // Physically convert the unit into its new profession
-        switch (task.getProfessionType().toLowerCase()) {
-            case "woodcutter":
-                pop.setWoodcutters(pop.getWoodcutters() + 1);
-                break;
-            case "stoneworker":
-                pop.setStoneworkers(pop.getStoneworkers() + 1);
-                break;
-            case "hunter":
-                pop.setHunters(pop.getHunters() + 1);
-                break;
-            case "baker":
-                pop.setBakers(pop.getBakers() + 1);
-                break;
-            default:
-                throw new IllegalStateException("Unknown profession type: " + task.getProfessionType());
+        // Self-Healing: Refunds stranded peasants lost to concurrent UI race conditions
+        if (pop.getInTraining() != activeCount) {
+            int stranded = pop.getInTraining() - activeCount;
+            pop.setInTraining(activeCount);
+            pop.setIdlePeasants(Math.max(0, pop.getIdlePeasants() + stranded));
+            changed = true;
         }
 
-        // Remove the task from the queue and save
-        taskRepository.delete(task);
-        profileRepository.save(profile);
+        if (changed) {
+            profileRepository.save(profile);
+        }
     }
 }

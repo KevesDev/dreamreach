@@ -6,10 +6,10 @@ import DashboardView from './views/DashboardView';
 import KingdomView from './views/KingdomView';
 import HeroesView from './views/HeroesView';
 import MissionsView from './views/MissionsView';
+import BoardView from './views/BoardView';
 import AdminView from './views/AdminView';
 import Layout from './components/Layout';
 
-// Placeholder component for the Shop
 const ShopPlaceholder = () => <div className="panel"><h2>Grand Bazaar (Under Construction)</h2></div>;
 
 export default function App() {
@@ -24,6 +24,7 @@ export default function App() {
                     <Route path="/dashboard" element={<DashboardView />} />
                     <Route path="/kingdom" element={<KingdomView />} />
                     <Route path="/heroes" element={<HeroesView />} />
+                    <Route path="/board" element={<BoardView />} />
                     <Route path="/missions" element={<MissionsView />} />
                     <Route path="/shop" element={<ShopPlaceholder />} />
                     <Route path="/admin" element={<AdminView />} />
