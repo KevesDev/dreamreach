@@ -1,17 +1,55 @@
-.missions-container {
-    display: flex;
-    height: calc(100vh - 80px);
-    gap: var(--space-md);
-}
-
-.ledger-pane {
-    width: 350px;
+.missions-wrapper {
     display: flex;
     flex-direction: column;
+    height: 100%;
+}
+
+.missions-nav {
+    display: flex;
+    border-bottom: 1px solid var(--border-strong);
+    background: var(--surface-1);
+    margin-bottom: var(--space-md);
+    border-radius: 8px 8px 0 0;
+}
+
+.missions-tab {
+    flex: 1;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--text-muted);
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.missions-tab:hover {
+    color: var(--text-primary);
+    background: var(--surface-2);
+}
+
+.missions-tab.active {
+    color: var(--accent-gold);
+    border-bottom-color: var(--accent-gold);
+    background: var(--surface-2);
+}
+
+.missions-container {
+    display: flex;
+    flex: 1;
     background: var(--bg-panel);
     border: 1px solid var(--border-strong);
     border-radius: 8px;
     overflow: hidden;
+}
+
+/* Tab 1: Assembly (Flattened) */
+.ledger-pane {
+    width: 350px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-strong);
+    background: var(--surface-1);
 }
 
 .ledger-header {
@@ -19,10 +57,7 @@
     border-bottom: 1px solid var(--border-subtle);
 }
 
-.ledger-header h2 {
-    margin: 0;
-    color: var(--accent-gold);
-}
+.ledger-header h2 { margin: 0; color: var(--accent-gold); }
 
 .quest-list {
     flex: 1;
@@ -42,34 +77,16 @@
     transition: all 0.2s;
     border-left: 4px solid transparent;
 }
-
-.quest-card:hover {
-    background: var(--surface-2);
-}
-
-.quest-card.selected {
-    background: var(--surface-2);
-}
-
-/* Quest Type Colors */
+.quest-card:hover { background: var(--surface-2); }
+.quest-card.selected { background: var(--surface-2); }
 .quest-card[data-type="SCOUTING"] { border-left-color: var(--success); }
 .quest-card[data-type="RAIDING"] { border-left-color: var(--danger); }
 .quest-card[data-type="STORY"] { border-left-color: var(--accent-blue); }
 .quest-card[data-type="ESCORT"] { border-left-color: var(--warning); }
 .quest-card[data-type="HUNT"] { border-left-color: #a335ee; }
 
-.quest-card-title {
-    font-weight: bold;
-    color: var(--text-primary);
-    margin-bottom: 4px;
-}
-
-.quest-card-type {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
+.quest-card-title { font-weight: bold; color: var(--text-primary); margin-bottom: 4px; }
+.quest-card-type { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
 .quest-details-panel {
     padding: var(--space-md);
@@ -79,184 +96,102 @@
     display: flex;
     flex-direction: column;
 }
-
-.quest-details-title {
-    font-size: 1.2rem;
-    color: var(--accent-gold);
-    margin: 0 0 10px 0;
-}
-
-.quest-details-desc {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    line-height: 1.5;
-    font-style: italic;
-    flex: 1;
-}
+.quest-details-title { font-size: 1.2rem; color: var(--accent-gold); margin: 0 0 10px 0; }
+.quest-details-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; font-style: italic; flex: 1; }
 
 .success-indicator {
-    margin-top: 15px;
-    padding: 12px;
-    background: var(--surface-2);
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
-    text-align: center;
-    font-weight: bold;
-    font-size: 1.1rem;
+    margin-top: 15px; padding: 12px;
+    background: var(--surface-2); border: 1px solid var(--border-subtle);
+    border-radius: 6px; text-align: center; font-weight: bold; font-size: 1.1rem;
     transition: all 0.3s ease;
 }
-
 .success-low { color: var(--danger); border-color: var(--danger); }
 .success-med { color: var(--warning); border-color: var(--warning); }
 .success-high { color: var(--success); border-color: var(--success); }
 
-
 .assembly-pane {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-    background: var(--bg-panel);
-    border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    padding: var(--space-md);
+    flex: 1; display: flex; flex-direction: column; padding: var(--space-md);
 }
 
 .party-slots-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 
 .party-slots-grid {
-    display: flex;
-    gap: var(--space-md);
-    justify-content: center;
-    align-items: center;
-    margin-bottom: var(--space-lg);
+    display: flex; gap: var(--space-md); justify-content: center; align-items: center; margin-bottom: var(--space-lg);
 }
 
 .party-slot {
-    width: 120px;
-    height: 160px;
-    background: var(--surface-1);
-    border: 2px dashed var(--border-subtle);
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
+    width: 120px; height: 160px;
+    background: var(--surface-1); border: 2px dashed var(--border-subtle);
+    border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
 }
-
-.party-slot.filled {
-    border-style: solid;
-    border-color: var(--accent-gold);
-    background: var(--surface-2);
-}
-
-.party-slot.empty:hover {
-    border-color: var(--text-muted);
-    background: var(--surface-2);
-}
-
+.party-slot.filled { border-style: solid; border-color: var(--accent-gold); background: var(--surface-2); }
+.party-slot.empty:hover { border-color: var(--text-muted); background: var(--surface-2); }
 .party-slot.filled:hover::after {
-    content: "Remove";
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.7);
-    color: var(--danger);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
+    content: "Remove"; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7); color: var(--danger); display: flex; align-items: center; justify-content: center; font-weight: bold;
 }
-
-.slot-portrait {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    margin-bottom: 10px;
-    border: 2px solid var(--accent-gold);
-    object-fit: cover;
-}
-
-.slot-name {
-    font-size: 0.85rem;
-    font-weight: bold;
-    text-align: center;
-    color: var(--text-primary);
-}
-
-.slot-class {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-}
+.slot-portrait { width: 60px; height: 60px; border-radius: 50%; margin-bottom: 10px; border: 2px solid var(--accent-gold); object-fit: cover; }
+.slot-name { font-size: 0.85rem; font-weight: bold; text-align: center; color: var(--text-primary); }
+.slot-class { font-size: 0.7rem; color: var(--text-muted); }
 
 .roster-carousel-container {
-    height: 180px;
-    border-top: 1px solid var(--border-subtle);
-    padding-top: var(--space-md);
-    display: flex;
-    flex-direction: column;
+    height: 180px; border-top: 1px solid var(--border-subtle); padding-top: var(--space-md); display: flex; flex-direction: column;
 }
-
-.roster-carousel-header {
-    font-size: 1rem;
-    color: var(--accent-gold);
-    margin-bottom: var(--space-sm);
-}
-
-.roster-carousel {
-    display: flex;
-    gap: var(--space-sm);
-    overflow-x: auto;
-    padding-bottom: 10px;
-}
-
+.roster-carousel-header { font-size: 1rem; color: var(--accent-gold); margin-bottom: var(--space-sm); }
+.roster-carousel { display: flex; gap: var(--space-sm); overflow-x: auto; padding-bottom: 10px; }
 .carousel-card {
-    min-width: 100px;
-    width: 100px;
-    background: var(--surface-1);
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.2s;
+    min-width: 100px; width: 100px; background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: 6px;
+    padding: 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: all 0.2s;
+}
+.carousel-card:hover { border-color: var(--accent-gold); transform: translateY(-2px); }
+.carousel-portrait { width: 40px; height: 40px; border-radius: 50%; margin-bottom: 8px; border: 1px solid var(--border-strong); }
+.carousel-name { font-size: 0.75rem; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+.carousel-class { font-size: 0.65rem; color: var(--text-muted); }
+
+/* Tab 2: Expeditions Tracking */
+.expeditions-pane {
+    width: 100%; padding: var(--space-md); overflow-y: auto; background: var(--bg-panel);
 }
 
-.carousel-card:hover {
-    border-color: var(--accent-gold);
-    transform: translateY(-2px);
+.expedition-card {
+    border: 1px solid var(--border-strong); background: var(--surface-1);
+    padding: var(--space-md); border-radius: 8px; margin-bottom: var(--space-md);
+    display: flex; justify-content: space-between; align-items: center;
 }
 
-.carousel-portrait {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin-bottom: 8px;
-    border: 1px solid var(--border-strong);
-}
+.expedition-info h3 { margin: 0 0 5px 0; color: var(--accent-gold); }
+.expedition-info p { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
 
-.carousel-name {
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width: 100%;
-}
+.countdown-timer { font-family: monospace; font-size: 1.5rem; font-weight: bold; color: var(--text-primary); text-align: center; }
 
-.carousel-class {
-    font-size: 0.65rem;
-    color: var(--text-muted);
+.deployed-party { display: flex; gap: 10px; }
+
+/* Speech Bubble Hover Effect */
+.portrait-wrapper { position: relative; display: inline-block; cursor: help; }
+.portrait-wrapper img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--border-strong); }
+
+.speech-bubble {
+    visibility: hidden; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+    background: var(--surface-2); color: var(--text-primary); padding: 8px 12px;
+    border-radius: 8px; border: 1px solid var(--accent-gold); white-space: nowrap;
+    font-size: 0.8rem; z-index: 10; opacity: 0; transition: opacity 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
+.speech-bubble::after {
+    content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px;
+    border-width: 6px; border-style: solid; border-color: var(--accent-gold) transparent transparent transparent;
+}
+.portrait-wrapper:hover .speech-bubble { visibility: visible; opacity: 1; }
+
+/* Dispatch Modal */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000;
+}
+.modal-content {
+    background: var(--bg-panel); border: 2px solid var(--accent-gold); border-radius: 8px;
+    padding: 30px; width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.modal-content h2 { margin-top: 0; color: var(--text-primary); }
