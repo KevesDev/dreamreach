@@ -159,10 +159,10 @@ public class EconomyService {
         if (newHappiness < 0) newHappiness = 0;
         profile.setHappiness(newHappiness);
 
-        int newPendingFood = res.getPendingFood() + (int)(foodRate * hoursElapsed);
-        int newPendingWood = res.getPendingWood() + (int)(woodRate * hoursElapsed);
-        int newPendingStone = res.getPendingStone() + (int)(stoneRate * hoursElapsed);
-        int newPendingGold = res.getPendingGold() + (int)(goldRate * hoursElapsed);
+        double newPendingFood = res.getPendingFood() + (foodRate * hoursElapsed);
+        double newPendingWood = res.getPendingWood() + (woodRate * hoursElapsed);
+        double newPendingStone = res.getPendingStone() + (stoneRate * hoursElapsed);
+        double newPendingGold = res.getPendingGold() + (goldRate * hoursElapsed);
 
         // Clamp pending consumption to prevent total treasury from dropping below zero
         if (res.getFood() + newPendingFood < 0) newPendingFood = -res.getFood();
@@ -300,15 +300,28 @@ public class EconomyService {
 
         PlayerResources res = profile.getResources();
 
-        res.setFood(Math.max(0, res.getFood() + res.getPendingFood()));
-        res.setWood(Math.max(0, res.getWood() + res.getPendingWood()));
-        res.setStone(Math.max(0, res.getStone() + res.getPendingStone()));
+        int keepLevel = profile.getBuildings().stream()
+                .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
+                .mapToInt(BuildingInstance::getLevel)
+                .max().orElse(1);
+        int maxStorage = keepLevel * economyConfig.getBaseStoragePerKeepLevel();
 
-        // Note: Gold is explicitly NOT claimed here anymore. It has a separate 1-hour collection cycle via collectTaxes().
+        int claimFood = (int) res.getPendingFood();
+        int claimWood = (int) res.getPendingWood();
+        int claimStone = (int) res.getPendingStone();
 
-        res.setPendingFood(0);
-        res.setPendingWood(0);
-        res.setPendingStone(0);
+        int actualFoodToAdd = claimFood > 0 ? Math.min(claimFood, Math.max(0, maxStorage - res.getFood())) : claimFood;
+        int actualWoodToAdd = claimWood > 0 ? Math.min(claimWood, Math.max(0, maxStorage - res.getWood())) : claimWood;
+        int actualStoneToAdd = claimStone > 0 ? Math.min(claimStone, Math.max(0, maxStorage - res.getStone())) : claimStone;
+
+        res.setFood(Math.max(0, res.getFood() + actualFoodToAdd));
+        res.setWood(Math.max(0, res.getWood() + actualWoodToAdd));
+        res.setStone(Math.max(0, res.getStone() + actualStoneToAdd));
+
+        // Deduct only the exact integer amount we claimed from the pending pool, leaving any fractional remainders intact
+        res.setPendingFood(res.getPendingFood() - claimFood);
+        res.setPendingWood(res.getPendingWood() - claimWood);
+        res.setPendingStone(res.getPendingStone() - claimStone);
 
         profileRepository.save(profile);
     }
@@ -344,8 +357,18 @@ public class EconomyService {
         }
 
         PlayerResources res = profile.getResources();
-        res.setGold(Math.max(0, res.getGold() + res.getPendingGold()));
-        res.setPendingGold(0);
+
+        int keepLevel = profile.getBuildings().stream()
+                .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
+                .mapToInt(BuildingInstance::getLevel)
+                .max().orElse(1);
+        int maxStorage = keepLevel * economyConfig.getBaseStoragePerKeepLevel();
+
+        int claimGold = (int) res.getPendingGold();
+        int actualGoldToAdd = claimGold > 0 ? Math.min(claimGold, Math.max(0, maxStorage - res.getGold())) : claimGold;
+
+        res.setGold(Math.max(0, res.getGold() + actualGoldToAdd));
+        res.setPendingGold(res.getPendingGold() - claimGold);
 
         profile.setLastTaxCollectionTime(now);
         profileRepository.save(profile);

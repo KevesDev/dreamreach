@@ -185,10 +185,10 @@ public class PlayerController {
                 .woodRate(woodRate)
                 .stoneRate(stoneRate)
 
-                .pendingFood(profile.getResources() != null ? profile.getResources().getPendingFood() : 0)
-                .pendingWood(profile.getResources() != null ? profile.getResources().getPendingWood() : 0)
-                .pendingStone(profile.getResources() != null ? profile.getResources().getPendingStone() : 0)
-                .pendingGold(profile.getResources() != null ? profile.getResources().getPendingGold() : 0)
+                .pendingFood(profile.getResources() != null ? (int) profile.getResources().getPendingFood() : 0)
+                .pendingWood(profile.getResources() != null ? (int) profile.getResources().getPendingWood() : 0)
+                .pendingStone(profile.getResources() != null ? (int) profile.getResources().getPendingStone() : 0)
+                .pendingGold(profile.getResources() != null ? (int) profile.getResources().getPendingGold() : 0)
 
                 .happiness(profile.getHappiness())
                 .maxHappiness(economyConfig.getMaxHappiness())
