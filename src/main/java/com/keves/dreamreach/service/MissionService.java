@@ -41,6 +41,10 @@ public class MissionService {
         this.config = config;
     }
 
+    public List<QuestTemplate> getAllQuests() {
+        return questRepo.findAll();
+    }
+
     /**
      * Executes the complex math logic to determine a party's chance of success.
      */

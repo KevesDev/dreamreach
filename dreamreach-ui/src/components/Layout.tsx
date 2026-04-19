@@ -172,6 +172,9 @@ export default function Layout() {
                     <Link to="/heroes" className={`list-item ${location.pathname === '/heroes' ? 'active' : ''}`}>
                         <Icon name="combat" size={18} style={{ marginRight: '12px' }} /> Heroes
                     </Link>
+                    <Link to="/missions" className={`list-item ${location.pathname === '/missions' ? 'active' : ''}`}>
+                        <Icon name="inventory" size={18} style={{ marginRight: '12px' }} /> Missions
+                    </Link>
                     <Link to="/shop" className={`list-item ${location.pathname === '/shop' ? 'active' : ''}`}>
                         <Icon name="shop" size={18} style={{ marginRight: '12px' }} /> Shop
                     </Link>
