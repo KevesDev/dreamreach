@@ -103,7 +103,7 @@ public class GameEconomyConfig {
     private int tavernUnlockLevel = 1;
 
     // How often (in minutes) the server calculates if a hero arrived
-    private int tavernCheckIntervalMinutes = 5;
+    private int tavernCheckIntervalMinutes = 60;
 
     // The percentage chance (0.0 to 1.0) per interval that an empty slot gets a hero
     private double tavernArrivalChance = 0.3;

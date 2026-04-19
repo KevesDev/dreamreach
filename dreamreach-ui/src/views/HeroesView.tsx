@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../api/client';
 import { Icon } from '../components/Icon';
 import './HeroesView.css';
@@ -30,6 +30,7 @@ export interface Character {
     weaponTier: string;
     armorTier: string;
     portraitUrl?: string;
+    longRestEndTimeEpoch?: number; // Added to interface
 }
 
 export default function HeroesView() {
@@ -38,32 +39,55 @@ export default function HeroesView() {
     const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
     const [isResting, setIsResting] = useState(false);
 
-    const fetchRoster = () => {
-        setLoading(true);
-        api.get('/roster')
+    // Dynamic Clock State
+    const [now, setNow] = useState(Date.now());
+    const [isResolving, setIsResolving] = useState(false);
+
+    const fetchRoster = useCallback(() => {
+        return api.get('/roster')
             .then(res => {
                 setRoster(res.data);
                 if (res.data.length > 0 && !selectedCharacterId) {
                     setSelectedCharacterId(res.data[0].characterId);
                 }
-                setLoading(false);
             })
             .catch(err => {
                 console.error("Failed to load roster", err);
-                setLoading(false);
             });
-    };
+    }, [selectedCharacterId]);
 
+    // Initial Load
     useEffect(() => {
-        fetchRoster();
+        setLoading(true);
+        fetchRoster().finally(() => setLoading(false));
+    }, [fetchRoster]);
+
+    // 1-Second Global Tick for Countdown Timers
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(interval);
     }, []);
+
+    // Auto-Awaken Hook: Dynamically fetches roster if any character finishes resting
+    useEffect(() => {
+        const hasFinishedResting = roster.some(
+            char => char.status === 'RESTING' && char.longRestEndTimeEpoch && now >= char.longRestEndTimeEpoch
+        );
+
+        if (hasFinishedResting && !isResolving) {
+            setIsResolving(true);
+            setTimeout(() => {
+                fetchRoster().finally(() => setIsResolving(false));
+            }, 1000);
+        }
+    }, [now, roster, isResolving, fetchRoster]);
 
     const handleLongRest = async () => {
         if (!selectedCharacter || isResting) return;
         setIsResting(true);
         try {
             await api.post(`/roster/${selectedCharacter.characterId}/rest`);
-            fetchRoster(); // Refresh the roster to pull the new status and updated tick
+            fetchRoster(); // Refresh the roster to pull the new timestamp
         } catch (err: any) {
             alert(err.response?.data || "Failed to initiate Long Rest.");
         } finally {
@@ -83,6 +107,15 @@ export default function HeroesView() {
         }
     };
 
+    const formatTimeLeft = (endTimeMs: number) => {
+        const diff = Math.max(0, endTimeMs - now);
+        if (diff === 0) return "Awakening...";
+        const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
+        const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
+    };
+
     const selectedCharacter = useMemo(() => {
         if (!selectedCharacterId) return null;
         return roster.find(char => char.characterId === selectedCharacterId) || null;
@@ -94,7 +127,6 @@ export default function HeroesView() {
 
     return (
         <div className="heroes-split-layout">
-            {/* Left: Scrollable Deck List */}
             <aside className="heroes-deck-pane">
                 <div className="deck-header">
                     <h2>Roster</h2>
@@ -128,7 +160,6 @@ export default function HeroesView() {
                 )}
             </aside>
 
-            {/* Right: Detailed D&D Character Sheet */}
             <main className="heroes-sheet-pane">
                 {selectedCharacter ? (
                     <div className={`parchment-sheet ${getRarityClass(selectedCharacter.rarity)}`}>
@@ -215,7 +246,7 @@ export default function HeroesView() {
                             <div className="tooltip-container">
                                 {selectedCharacter.status === 'RESTING' ? (
                                     <button className="button" style={{ opacity: 0.7, padding: '12px 24px', border: '2px solid #8b572a', background: 'transparent', color: '#3e2714', fontWeight: 'bold' }} disabled>
-                                        Currently Resting (8 Hrs)
+                                        Currently Resting ({selectedCharacter.longRestEndTimeEpoch ? formatTimeLeft(selectedCharacter.longRestEndTimeEpoch) : '8 Hrs'})
                                     </button>
                                 ) : (
                                     <button

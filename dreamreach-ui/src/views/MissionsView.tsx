@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import api from '../api/client';
 import { Icon } from '../components/Icon';
 import './MissionsView.css';
@@ -32,6 +33,7 @@ export interface ActiveMission {
 }
 
 export default function MissionsView() {
+    const { fetchProfile } = useOutletContext<any>();
     const [activeTab, setActiveTab] = useState<'ASSEMBLY' | 'EXPEDITIONS'>('ASSEMBLY');
     const [roster, setRoster] = useState<Character[]>([]);
     const [quests, setQuests] = useState<Quest[]>([]);
@@ -45,16 +47,10 @@ export default function MissionsView() {
     const [showModal, setShowModal] = useState(false);
     const [isDispatching, setIsDispatching] = useState(false);
     const [now, setNow] = useState(Date.now());
+    const [isResolving, setIsResolving] = useState(false);
 
-    // Timer loop for active missions
-    useEffect(() => {
-        const interval = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(interval);
-    }, []);
-
-    const fetchAllData = () => {
-        setLoading(true);
-        Promise.all([
+    const fetchAllData = useCallback(() => {
+        return Promise.all([
             api.get('/roster'),
             api.get('/missions/quests'),
             api.get('/missions/active')
@@ -62,19 +58,33 @@ export default function MissionsView() {
             setRoster(rosterRes.data);
             setQuests(questsRes.data);
             setActiveMissions(activeRes.data);
-            if (questsRes.data.length > 0 && !selectedQuestId) {
-                setSelectedQuestId(questsRes.data[0].id);
-            }
-            setLoading(false);
+            setSelectedQuestId(prev => (!prev && questsRes.data.length > 0) ? questsRes.data[0].id : prev);
         }).catch(err => {
             console.error("Failed to load missions data", err);
-            setLoading(false);
         });
-    };
+    }, []);
 
     useEffect(() => {
-        fetchAllData();
+        fetchAllData().finally(() => setLoading(false));
+    }, [fetchAllData]);
+
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        const hasExpired = activeMissions.some(m => now >= m.endTimeEpoch);
+        if (hasExpired && !isResolving) {
+            setIsResolving(true);
+            const timer = setTimeout(() => {
+                fetchAllData().then(() => {
+                    if (fetchProfile) fetchProfile();
+                }).finally(() => setIsResolving(false));
+            }, 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [now, activeMissions, isResolving, fetchAllData, fetchProfile]);
 
     useEffect(() => {
         if (!selectedQuestId || activeTab !== 'ASSEMBLY') {
@@ -102,11 +112,11 @@ export default function MissionsView() {
         api.post('/missions/dispatch', { questId: selectedQuestId, characterIds: activeCharacterIds })
             .then(() => {
                 setShowModal(false);
-                setPartySlots([null, null, null, null, null]); // clear slots
-                fetchAllData(); // refresh to pull the new ActiveMission and update roster statuses
-                setActiveTab('EXPEDITIONS'); // Flip user to watch their new mission
+                setPartySlots([null, null, null, null, null]);
+                fetchAllData();
+                setActiveTab('EXPEDITIONS');
             })
-            .catch(err => alert("Failed to dispatch party: " + (err.response?.data || err.message)))
+            .catch(err => alert("Failed to embark on mission: " + (err.response?.data || err.message)))
             .finally(() => setIsDispatching(false));
     };
 
@@ -147,23 +157,26 @@ export default function MissionsView() {
         return `${h}:${m}:${s}`;
     };
 
-    const parseMissionQuip = (jsonString: string) => {
+    const parseMissionQuip = (jsonString: string | undefined | null) => {
+        if (!jsonString) return "Ready for the journey.";
         try {
             const obj = JSON.parse(jsonString);
-            return obj.MISSION || "For the Kingdom!";
-        } catch { return "For the Kingdom!"; }
+            return obj.MISSION || obj.IDLE || "Ready for the journey.";
+        } catch {
+            return "Ready for the journey.";
+        }
     };
 
-    if (loading) return <div className="panel" style={{ margin: 'var(--space-md)' }}>Loading War Room...</div>;
+    if (loading) return <div className="panel" style={{ margin: 'var(--space-md)' }}>Loading Mission Board...</div>;
 
     return (
         <div className="missions-wrapper">
             <div className="missions-nav">
                 <div className={`missions-tab ${activeTab === 'ASSEMBLY' ? 'active' : ''}`} onClick={() => setActiveTab('ASSEMBLY')}>
-                    Assembly (Quest Journal)
+                    Mission Board
                 </div>
                 <div className={`missions-tab ${activeTab === 'EXPEDITIONS' ? 'active' : ''}`} onClick={() => setActiveTab('EXPEDITIONS')}>
-                    Expeditions ({activeMissions.length} Active)
+                    Active Missions ({activeMissions.length})
                 </div>
             </div>
 
@@ -172,7 +185,7 @@ export default function MissionsView() {
                     <>
                         <aside className="ledger-pane">
                             <div className="ledger-header">
-                                <h2>Quest Journal</h2>
+                                <h2>Mission Board</h2>
                             </div>
                             <div className="quest-list">
                                 {quests.map(quest => (
@@ -190,14 +203,14 @@ export default function MissionsView() {
                                         <div className={`success-indicator ${getSuccessColorClass()}`}>Success Chance: {successChance}%</div>
                                     </>
                                 ) : (
-                                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', margin: 'auto 0' }}>Select a quest.</div>
+                                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', margin: 'auto 0' }}>Select a mission.</div>
                                 )}
                             </div>
                         </aside>
 
                         <main className="assembly-pane">
                             <div className="party-slots-container">
-                                <h3 style={{ color: 'var(--text-primary)', marginBottom: 'var(--space-lg)' }}>Party Muster</h3>
+                                <h3 style={{ color: 'var(--text-primary)', marginBottom: 'var(--space-lg)' }}>Party Assembly</h3>
                                 <div className="party-slots-grid">
                                     {partySlots.map((slot, index) => (
                                         <div key={index} className={`party-slot ${slot ? 'filled' : 'empty'}`} onClick={() => slot && removeFromSlot(index)}>
@@ -216,7 +229,7 @@ export default function MissionsView() {
                                     onClick={() => setShowModal(true)}
                                     disabled={partySlots.every(slot => slot === null) || !selectedQuestId}
                                 >
-                                    Dispatch Party
+                                    Embark on Mission
                                 </button>
                             </div>
 
@@ -241,9 +254,8 @@ export default function MissionsView() {
                         {activeMissions.length === 0 ? (
                             <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '40px' }}>
                                 <Icon name="kingdom" size={48} />
-                                <h2>No Active Expeditions</h2>
-                                <p>Your armies rest. Assemble a party and dispatch them from the Quest Journal.</p>
-                                <button className="button" style={{marginTop: '10px'}} onClick={fetchAllData}>Refresh Radar</button>
+                                <h2>No Active Missions</h2>
+                                <p>Your heroes rest. Assemble a party and embark from the Mission Board.</p>
                             </div>
                         ) : (
                             activeMissions.sort((a,b) => b.dispatchTimeEpoch - a.dispatchTimeEpoch).map(mission => (
@@ -251,7 +263,6 @@ export default function MissionsView() {
                                     <div className="expedition-info">
                                         <h3>{mission.questTitle}</h3>
                                         <p>Type: {mission.questType} | Success Prob: {mission.successChance}%</p>
-                                        <button className="button--secondary" style={{padding: '4px 8px', fontSize: '0.7rem', marginTop: '8px'}} onClick={fetchAllData}>Check Status</button>
                                     </div>
 
                                     <div className="countdown-timer" style={{ color: now > mission.endTimeEpoch ? 'var(--accent-gold)' : 'var(--text-primary)' }}>
@@ -276,9 +287,9 @@ export default function MissionsView() {
             {showModal && (
                 <div className="modal-overlay">
                     <div className="modal-content">
-                        <h2>Confirm Dispatch</h2>
+                        <h2>Confirm Mission</h2>
                         <p style={{marginBottom: '20px', color: 'var(--text-muted)'}}>
-                            Are you sure you want to send this party to <strong>{selectedQuest?.title}</strong>?
+                            Are you sure you want to send this party on <strong>{selectedQuest?.title}</strong>?
                         </p>
                         <div style={{ background: 'var(--surface-2)', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
                             <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: getSuccessColorClass() === 'success-high' ? 'var(--success)' : getSuccessColorClass() === 'success-med' ? 'var(--warning)' : 'var(--danger)' }}>
@@ -291,7 +302,7 @@ export default function MissionsView() {
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                             <button className="button button--danger" onClick={() => setShowModal(false)}>Cancel</button>
                             <button className="button button--claim" onClick={handleDispatch} disabled={isDispatching}>
-                                {isDispatching ? 'Deploying...' : 'Confirm & Send'}
+                                {isDispatching ? 'Embarking...' : 'Confirm & Embark'}
                             </button>
                         </div>
                     </div>

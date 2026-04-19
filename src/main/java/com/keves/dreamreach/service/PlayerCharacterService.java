@@ -27,12 +27,11 @@ public class PlayerCharacterService {
         this.playerProfileRepository = playerProfileRepository;
     }
 
-    @Transactional // Removed readOnly = true to allow state updates on fetch
+    @Transactional
     public List<CharacterRosterResponse> getPlayerRoster(String displayName) {
         PlayerProfile player = playerProfileRepository.findByDisplayName(displayName)
                 .orElseThrow(() -> new ResourceNotFoundException("Player profile not found for display name: " + displayName));
 
-        // Process resting logic before sending the roster back to the UI
         processPassiveRecovery(player);
 
         List<PlayerCharacter> rawRoster = playerCharacterRepository.findByOwnerId(player.getId());
@@ -42,9 +41,6 @@ public class PlayerCharacterService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Processes passive Short Rest healing and Long Rest completion.
-     */
     @Transactional
     public void processPassiveRecovery(PlayerProfile profile) {
         List<PlayerCharacter> roster = playerCharacterRepository.findByOwnerId(profile.getId());
@@ -53,20 +49,18 @@ public class PlayerCharacterService {
         for (PlayerCharacter hero : roster) {
             boolean updated = false;
 
-            // Process Long Rest completion
             if ("RESTING".equalsIgnoreCase(hero.getStatus()) && hero.getLongRestEndTime() != null) {
                 if (now.isAfter(hero.getLongRestEndTime())) {
                     hero.setStatus("IDLE");
                     hero.setCurrentHp(hero.getMaxHp());
                     hero.setCurrentMana(hero.getMaxMana());
-                    hero.setSpentHitDice(0); // Recover all spent Hit Dice
+                    hero.setSpentHitDice(0);
                     hero.setLongRestEndTime(null);
                     hero.setLastRestTick(now);
                     updated = true;
                 }
             }
 
-            // Process Passive Short Rest (Idle Healing)
             if ("IDLE".equalsIgnoreCase(hero.getStatus()) && hero.getLastRestTick() != null) {
                 long hoursElapsed = ChronoUnit.HOURS.between(hero.getLastRestTick(), now);
                 if (hoursElapsed > 0) {
@@ -74,15 +68,13 @@ public class PlayerCharacterService {
                         if (hero.getCurrentHp() < hero.getMaxHp() && hero.getSpentHitDice() < hero.getMaxHitDice()) {
                             hero.setSpentHitDice(hero.getSpentHitDice() + 1);
 
-                            // Average Hit Die Value = (Max / 2) + 1
                             int avgHitDie = (hero.getTemplate().getHitDieType() / 2) + 1;
                             int conMod = DndMathUtility.calculateModifier(hero.getTotalConstitution());
-                            int healAmount = Math.max(1, avgHitDie + conMod); // At least 1 HP
+                            int healAmount = Math.max(1, avgHitDie + conMod);
 
                             hero.setCurrentHp(Math.min(hero.getMaxHp(), hero.getCurrentHp() + healAmount));
                         }
                     }
-                    // Only advance the tick by the exact full hours processed, retaining the fractional minutes
                     hero.setLastRestTick(hero.getLastRestTick().plus(hoursElapsed, ChronoUnit.HOURS));
                     updated = true;
                 }
@@ -94,9 +86,6 @@ public class PlayerCharacterService {
         }
     }
 
-    /**
-     * Initiates an 8-hour Long Rest for the specified character.
-     */
     @Transactional
     public void initiateLongRest(UUID characterId, String displayName) {
         PlayerProfile player = playerProfileRepository.findByDisplayName(displayName)
@@ -118,9 +107,6 @@ public class PlayerCharacterService {
         playerCharacterRepository.save(hero);
     }
 
-    /**
-     * Maps a raw PlayerCharacter database record to the full D&D stat block DTO.
-     */
     public CharacterRosterResponse mapToRosterResponse(PlayerCharacter character) {
         int str = character.getTotalStrength();
         int dex = character.getTotalDexterity();
@@ -129,7 +115,6 @@ public class PlayerCharacterService {
         int wis = character.getTotalWisdom();
         int cha = character.getTotalCharisma();
 
-        // Support both organic Tavern pulls and fallback seeded templates
         String displayRarity = character.getRolledRarity() != null
                 ? character.getRolledRarity().name()
                 : character.getTemplate().getRarity().name();
@@ -161,6 +146,7 @@ public class PlayerCharacterService {
                 .manaSlotsJson(character.getManaSlotsJson())
                 .status(character.getStatus())
                 .lastRestTickEpoch(character.getLastRestTick() != null ? character.getLastRestTick().toEpochMilli() : null)
+                .longRestEndTimeEpoch(character.getLongRestEndTime() != null ? character.getLongRestEndTime().toEpochMilli() : null) // Mapped here
                 .weaponTier(character.getWeaponTier())
                 .armorTier(character.getArmorTier())
                 .portraitUrl(character.getTemplate().getPortraitUrl())
