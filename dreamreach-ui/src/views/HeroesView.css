@@ -97,6 +97,7 @@
     display: flex;
     justify-content: center;
     padding: var(--space-md);
+    position: relative;
 }
 
 .parchment-sheet {
@@ -111,6 +112,7 @@
     display: flex;
     flex-direction: column;
     gap: 30px;
+    position: relative;
 }
 
 /* Rarity Accents on Parchment */
@@ -140,9 +142,11 @@
 
 .sheet-subtitle { font-weight: bold; text-transform: uppercase; font-size: 0.9rem; display: flex; gap: 15px; margin-top: 5px; }
 
-.sheet-vitals-container { width: 180px; }
+.sheet-vitals-container { width: 180px; display: flex; flex-direction: column; gap: 15px;}
 
 .sheet-hp-display { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
+
+.sheet-hd-display { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;}
 
 .sheet-stats-block {
     background: rgba(139, 87, 42, 0.05);
@@ -184,3 +188,49 @@
 .placeholder-text { font-style: italic; color: #666; }
 
 .sheet-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center; }
+
+/* Tooltip Styles */
+.tooltip-container {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+}
+
+.tooltip-text {
+    visibility: hidden;
+    width: 250px;
+    background-color: var(--surface-2);
+    color: var(--text-primary);
+    text-align: left;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 10;
+    bottom: 125%; /* Position above the element */
+    left: 50%;
+    margin-left: -125px; /* Center the tooltip */
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.8rem;
+    font-weight: normal;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    font-family: var(--font-body);
+}
+
+.tooltip-container:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Arrow for the tooltip */
+.tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--border-strong) transparent transparent transparent;
+}

@@ -3,7 +3,6 @@ import api from '../api/client';
 import { Icon } from '../components/Icon';
 import './HeroesView.css';
 
-// Export added here to resolve TS2614
 export interface Character {
     characterId: string;
     name: string;
@@ -26,6 +25,7 @@ export interface Character {
     currentHp: number;
     maxHp: number;
     spentHitDice: number;
+    maxHitDice: number;
     status: string;
     weaponTier: string;
     armorTier: string;
@@ -36,8 +36,10 @@ export default function HeroesView() {
     const [roster, setRoster] = useState<Character[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
+    const [isResting, setIsResting] = useState(false);
 
-    useEffect(() => {
+    const fetchRoster = () => {
+        setLoading(true);
         api.get('/roster')
             .then(res => {
                 setRoster(res.data);
@@ -50,7 +52,24 @@ export default function HeroesView() {
                 console.error("Failed to load roster", err);
                 setLoading(false);
             });
-    }, [selectedCharacterId]);
+    };
+
+    useEffect(() => {
+        fetchRoster();
+    }, []);
+
+    const handleLongRest = async () => {
+        if (!selectedCharacter || isResting) return;
+        setIsResting(true);
+        try {
+            await api.post(`/roster/${selectedCharacter.characterId}/rest`);
+            fetchRoster(); // Refresh the roster to pull the new status and updated tick
+        } catch (err: any) {
+            alert(err.response?.data || "Failed to initiate Long Rest.");
+        } finally {
+            setIsResting(false);
+        }
+    };
 
     const formatMod = (mod: number) => mod >= 0 ? `+${mod}` : `${mod}`;
 
@@ -70,6 +89,8 @@ export default function HeroesView() {
     }, [roster, selectedCharacterId]);
 
     if (loading) return <div className="panel" style={{ margin: 'var(--space-md)' }}>Gathering Party...</div>;
+
+    const availableHitDice = selectedCharacter ? selectedCharacter.maxHitDice - selectedCharacter.spentHitDice : 0;
 
     return (
         <div className="heroes-split-layout">
@@ -125,12 +146,34 @@ export default function HeroesView() {
                             </div>
 
                             <div className="sheet-vitals-container">
-                                <div className="sheet-hp-display">
-                                    <span>HP</span>
-                                    <span className="hp-vals">{selectedCharacter.currentHp} / {selectedCharacter.maxHp}</span>
+                                <div>
+                                    <div className="sheet-hp-display">
+                                        <span>HP</span>
+                                        <span className="hp-vals">{selectedCharacter.currentHp} / {selectedCharacter.maxHp}</span>
+                                    </div>
+                                    <div className="progress-bar-container">
+                                        <div className="progress-bar-fill success" style={{ width: `${(selectedCharacter.currentHp / selectedCharacter.maxHp) * 100}%`, background: '#8b572a' }}></div>
+                                    </div>
                                 </div>
-                                <div className="progress-bar-container">
-                                    <div className="progress-bar-fill success" style={{ width: `${(selectedCharacter.currentHp / selectedCharacter.maxHp) * 100}%` }}></div>
+
+                                <div className="tooltip-container" style={{width: '100%'}}>
+                                    <div className="sheet-hd-display">
+                                        <span>Hit Dice ⓘ</span>
+                                        <span>{availableHitDice} / {selectedCharacter.maxHitDice}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        {Array.from({ length: selectedCharacter.maxHitDice }).map((_, i) => (
+                                            <div key={i} style={{
+                                                width: '14px', height: '14px', borderRadius: '3px',
+                                                background: i < availableHitDice ? '#8b572a' : 'transparent',
+                                                border: '1px solid #8b572a'
+                                            }}></div>
+                                        ))}
+                                    </div>
+                                    <span className="tooltip-text">
+                                        <strong>Hit Dice</strong> are your character's natural stamina. <br/><br/>
+                                        Characters automatically spend 1 Hit Die for every hour they are left IDLE in the Kingdom to heal missing HP.
+                                    </span>
                                 </div>
                             </div>
                         </header>
@@ -167,12 +210,36 @@ export default function HeroesView() {
                             <h2 className="section-title"><Icon name="plus" size={18} style={{marginRight: '8px'}} /> Abilities & Powers</h2>
                             <p className="placeholder-text">Class features and active skills will appear here in future updates.</p>
                         </section>
+
+                        <div style={{marginTop: 'auto', display: 'flex', justifyContent: 'flex-end'}}>
+                            <div className="tooltip-container">
+                                {selectedCharacter.status === 'RESTING' ? (
+                                    <button className="button" style={{ opacity: 0.7, padding: '12px 24px', border: '2px solid #8b572a', background: 'transparent', color: '#3e2714', fontWeight: 'bold' }} disabled>
+                                        Currently Resting (8 Hrs)
+                                    </button>
+                                ) : (
+                                    <button
+                                        className="button"
+                                        style={{ padding: '12px 24px', border: '2px solid #8b572a', background: '#fdf6e3', color: '#3e2714', fontWeight: 'bold', cursor: 'pointer' }}
+                                        onClick={handleLongRest}
+                                        disabled={isResting || selectedCharacter.status === 'MISSION'}
+                                    >
+                                        Initiate Long Rest
+                                    </button>
+                                )}
+                                <span className="tooltip-text" style={{bottom: '100%', left: '50%', marginBottom: '10px'}}>
+                                    A <strong>Long Rest</strong> locks the character for 8 real-time hours.<br/><br/>
+                                    It completely restores their HP and abilities, clears status effects, and regenerates hit dice.
+                                </span>
+                            </div>
+                        </div>
+
                     </div>
                 ) : (
                     <div className="sheet-empty-state">
                         <Icon name="user" size={48} />
                         <h2>Select a Hero</h2>
-                        <p>Click a hero from your roster list to view their detailed D&D character sheet.</p>
+                        <p>Select a hero to view their details.</p>
                     </div>
                 )}
             </main>
