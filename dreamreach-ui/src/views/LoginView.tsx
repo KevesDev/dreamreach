@@ -23,7 +23,7 @@ export default function LoginView() {
             localStorage.setItem('dreamreach_token', response.data.token);
 
             // Store the streak data for the dashboard modal
-            localStorage.setItem('dreamreaach_streak', response.data.consecutiveLogins);
+            localStorage.setItem('dreamreach_streak', response.data.consecutiveLogins);
             localStorage.setItem('dreamreach_first_login', response.data.isFirstLoginToday);
             localStorage.setItem('dreamreach_reward_track', JSON.stringify(response.data.rewardTrack));
 

@@ -258,7 +258,7 @@ export default function BuildingSidePanel({
                                 <div style={{ background: 'var(--surface-1)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginTop: '8px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                         <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Pending Vault:</span>
-                                        <span style={{ color: 'var(--accent-gold)', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', fontWeight: 'bold' }}>{profile.pendingGold} G</span>
+                                        <span style={{ color: 'var(--accent-gold)', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', fontWeight: 'bold' }}>{Math.floor(profile.pendingGold)} G</span>
                                     </div>
                                     <button className="button button--claim" style={{ width: '100%' }} onClick={handleCollectTaxes} disabled={isBusy || (now - profile.lastTaxCollectionTimeEpoch) < 3600000}>
                                         { (now - profile.lastTaxCollectionTimeEpoch) >= 3600000 ? 'Collect Taxes' : `Wait ${formatTimeRemainingTaxes(profile.lastTaxCollectionTimeEpoch + 3600000, now)}` }
@@ -347,18 +347,29 @@ export default function BuildingSidePanel({
                             <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-md)', color: 'var(--text-muted)' }}>VAULT STORAGE</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {[
-                                    { label: 'Food', current: profile.food, color: 'var(--success)' },
-                                    { label: 'Wood', current: profile.wood, color: '#cd853f' },
-                                    { label: 'Stone', current: profile.stone, color: 'var(--text-muted)' },
-                                    { label: 'Gold', current: profile.gold, color: 'var(--accent-gold)' }
+                                    { label: 'Food', current: profile.food, pending: profile.pendingFood, color: 'var(--success)' },
+                                    { label: 'Wood', current: profile.wood, pending: profile.pendingWood, color: '#cd853f' },
+                                    { label: 'Stone', current: profile.stone, pending: profile.pendingStone, color: 'var(--text-muted)' },
+                                    { label: 'Gold', current: profile.gold, pending: profile.pendingGold, color: 'var(--accent-gold)' }
                                 ].map(res => (
                                     <div key={res.label}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
                                             <span>{res.label}</span>
-                                            <span><span style={{ color: res.current >= profile.maxStorage ? 'var(--danger)' : 'inherit' }}>{res.current}</span> / {profile.maxStorage}</span>
+                                            <span>
+                                                <span style={{ color: (res.current + res.pending) >= profile.maxStorage ? 'var(--danger)' : 'inherit' }}>
+                                                    {Math.floor(res.current + res.pending)}
+                                                </span> / {profile.maxStorage}
+                                            </span>
                                         </div>
                                         <div className="progress-bar-container" style={{ height: '6px', background: 'var(--surface-2)' }}>
-                                            <div className="progress-bar-fill" style={{ width: `${Math.min(100, (res.current / profile.maxStorage) * 100)}%`, background: res.color }}></div>
+                                            <div
+                                                className="progress-bar-fill"
+                                                style={{
+                                                    width: `${Math.min(100, ((res.current + res.pending) / profile.maxStorage) * 100)}%`,
+                                                    background: res.color,
+                                                    transition: 'width 1s linear' // Smooth real-time update
+                                                }}
+                                            ></div>
                                         </div>
                                     </div>
                                 ))}
