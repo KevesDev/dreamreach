@@ -1,5 +1,6 @@
 package com.keves.dreamreach.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,8 +16,13 @@ public class ActiveMissionResponse {
     private int successChance;
     private long dispatchTimeEpoch;
     private long endTimeEpoch;
+
+    @JsonProperty("isResolved")
     private boolean isResolved;
+
+    @JsonProperty("wasSuccessful")
     private boolean wasSuccessful;
+
     private List<CharacterSnippet> partyMembers;
 
     @Data
