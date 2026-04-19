@@ -1,5 +1,7 @@
 package com.keves.dreamreach.controller;
 
+import com.keves.dreamreach.dto.ActiveMissionResponse;
+import com.keves.dreamreach.dto.MissionDispatchRequest;
 import com.keves.dreamreach.dto.PartyCalculateRequest;
 import com.keves.dreamreach.dto.PartyCalculateResponse;
 import com.keves.dreamreach.dto.PartySaveRequest;
@@ -39,10 +41,21 @@ public class MissionController {
 
     @PostMapping("/party/save")
     public ResponseEntity<?> saveParty(@RequestBody PartySaveRequest request, Authentication authentication) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("Account not found."));
         missionService.saveParty(account.getProfile().getDisplayName(), request.getCharacterIds());
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/dispatch")
+    public ResponseEntity<?> dispatchParty(@RequestBody MissionDispatchRequest request, Authentication authentication) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+        missionService.dispatchParty(account.getProfile().getDisplayName(), request.getQuestId(), request.getCharacterIds());
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<List<ActiveMissionResponse>> getActiveMissions(Authentication authentication) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+        return ResponseEntity.ok(missionService.getActiveMissions(account.getProfile().getDisplayName()));
     }
 }
