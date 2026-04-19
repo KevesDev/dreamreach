@@ -5,6 +5,7 @@ interface IconProps {
     size?: number;
     className?: string;
     style?: React.CSSProperties;
+    onClick?: React.MouseEventHandler<SVGSVGElement>; // Added to allow click events!
 }
 
 const paths = {
@@ -28,9 +29,17 @@ const paths = {
     close: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
 };
 
-export const Icon: React.FC<IconProps> = ({ name, size = 20, className, style }) => {
+export const Icon: React.FC<IconProps> = ({ name, size = 20, className, style, onClick }) => {
     return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} style={{ display: 'inline-block', verticalAlign: 'middle', ...style }}>
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className={className}
+            style={{ display: 'inline-block', verticalAlign: 'middle', ...style }}
+            onClick={onClick} // Wired up!
+        >
             <path d={paths[name]} />
         </svg>
     );
