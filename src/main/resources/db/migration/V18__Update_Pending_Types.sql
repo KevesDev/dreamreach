@@ -1,0 +1,4 @@
+ALTER TABLE player_resources ALTER COLUMN pending_food TYPE DOUBLE PRECISION;
+ALTER TABLE player_resources ALTER COLUMN pending_wood TYPE DOUBLE PRECISION;
+ALTER TABLE player_resources ALTER COLUMN pending_stone TYPE DOUBLE PRECISION;
+ALTER TABLE player_resources ALTER COLUMN pending_gold TYPE DOUBLE PRECISION;

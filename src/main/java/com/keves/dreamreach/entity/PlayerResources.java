@@ -21,10 +21,10 @@ public class PlayerResources {
     @Column(nullable = false) private int gems = 0;
 
     // pending resource pool (accrued but not claimed yet)
-    @Column(nullable = false) private int pendingFood = 0;
-    @Column(nullable = false) private int pendingWood = 0;
-    @Column(nullable = false) private int pendingStone = 0;
-    @Column(nullable = false) private int pendingGold = 0;
+    @Column(nullable = false) private double pendingFood = 0.0;
+    @Column(nullable = false) private double pendingWood = 0.0;
+    @Column(nullable = false) private double pendingStone = 0.0;
+    @Column(nullable = false) private double pendingGold = 0.0;
 
     // The last time the pending pool was calculated
     @Column(nullable = false)
