@@ -40,17 +40,4 @@ public class PlayerTrainingController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
-    @PostMapping("/train/complete")
-    public ResponseEntity<?> completeTraining(Authentication authentication, @RequestParam String taskId) {
-        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
-
-        try {
-            trainingService.completeTraining(account.getProfile(), taskId);
-            return ResponseEntity.ok().build();
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
 }
