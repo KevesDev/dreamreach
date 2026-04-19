@@ -31,6 +31,9 @@ public class PlayerAccount {
     @Column(nullable = false)
     boolean isEnabled = false; // this gets toggled when user verifies email for a new account.
 
+    @Column(nullable = false)
+    private boolean isAdmin = false;
+
     @Column(name = "last_login_date")
     private Instant lastLoginDate;
 
