@@ -329,7 +329,6 @@ export default function BuildingSidePanel({
                                         ) : (
                                             <>
                                                 <button className="button" style={{ width: '100%' }} onClick={() => onConstruct(selectedGroup.type)} disabled={isBusy || !canAfford}>+ Construct New</button>
-                                                {!canAfford && (<p style={{ fontSize: '0.7rem', color: 'var(--danger)', textAlign: 'center', marginTop: '8px' }}>Not enough resources</p>)}
                                             </>
                                         )}
                                     </div>
