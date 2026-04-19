@@ -125,13 +125,13 @@ export default function MissionsView() {
             {/* Left Panel: Ledger */}
             <aside className="ledger-pane">
                 <div className="ledger-header">
-                    <h2>Bounty Board</h2>
+                    <h2>Mission Journal</h2>
                 </div>
 
                 <div className="quest-list">
                     {quests.length === 0 ? (
                         <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                            No active bounties available.
+                            No active missions available.
                         </div>
                     ) : (
                         quests.map(quest => (
