@@ -196,7 +196,7 @@ public class MissionService {
         activeMission.setQuestTemplate(quest);
         activeMission.setSuccessChance(calculateSuccessChance(characterIds, questId));
         activeMission.setDispatchTime(Instant.now());
-        activeMission.setEndTime(Instant.now().plus(quest.getDurationHours() != null ? quest.getDurationHours() : 2, ChronoUnit.HOURS));
+        activeMission.setEndTime(Instant.now().plus(quest.getDurationHours() != null ? quest.getDurationHours() : 4, ChronoUnit.HOURS));
 
         activeMissionRepo.save(activeMission);
         acceptedRepo.delete(accepted);
@@ -207,6 +207,7 @@ public class MissionService {
         PlayerProfile profile = profileRepo.findByDisplayName(displayName).orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
         resolveCompletedMissions(profile);
         return activeMissionRepo.findByPartyOwnerId(profile.getId()).stream().map(mission -> {
+            QuestTemplate qt = mission.getQuestTemplate();
             List<PlayerCharacter> partyMembers = getPartyMembers(mission.getParty());
             List<ActiveMissionResponse.CharacterSnippet> snippets = partyMembers.stream()
                     .map(pc -> ActiveMissionResponse.CharacterSnippet.builder()
@@ -218,13 +219,20 @@ public class MissionService {
 
             return ActiveMissionResponse.builder()
                     .missionId(mission.getId())
-                    .questTitle(mission.getQuestTemplate().getTitle())
-                    .questType(mission.getQuestTemplate().getType().name())
+                    .questTitle(qt.getTitle())
+                    .questType(qt.getType().name())
                     .successChance(mission.getSuccessChance())
                     .dispatchTimeEpoch(mission.getDispatchTime().toEpochMilli())
                     .endTimeEpoch(mission.getEndTime().toEpochMilli())
                     .isResolved(mission.isResolved())
                     .wasSuccessful(mission.isWasSuccessful())
+                    // Map rewards directly into the response so UI can show them without lookup
+                    .rewardGold(qt.getRewardGold() != null ? qt.getRewardGold() : 0)
+                    .rewardGems(qt.getRewardGems() != null ? qt.getRewardGems() : 0)
+                    .rewardFood(qt.getRewardFood() != null ? qt.getRewardFood() : 0)
+                    .rewardWood(qt.getRewardWood() != null ? qt.getRewardWood() : 0)
+                    .rewardStone(qt.getRewardStone() != null ? qt.getRewardStone() : 0)
+                    .rewardExp(qt.getBaseExp() != null ? qt.getBaseExp() : 0)
                     .partyMembers(snippets)
                     .build();
         }).collect(Collectors.toList());
@@ -236,7 +244,6 @@ public class MissionService {
         Instant now = Instant.now();
 
         for (ActiveMission mission : missions) {
-            // Only process missions whose timers have expired but aren't flagged as resolved yet
             if (now.isBefore(mission.getEndTime()) || mission.isResolved()) continue;
 
             boolean success = (random.nextInt(100) + 1) <= mission.getSuccessChance();

@@ -23,6 +23,14 @@ public class ActiveMissionResponse {
     @JsonProperty("wasSuccessful")
     private boolean wasSuccessful;
 
+    // Added reward fields to ensure the UI can display results even after mission is removed from Journal
+    private int rewardGold;
+    private int rewardGems;
+    private int rewardFood;
+    private int rewardWood;
+    private int rewardStone;
+    private int rewardExp;
+
     private List<CharacterSnippet> partyMembers;
 
     @Data

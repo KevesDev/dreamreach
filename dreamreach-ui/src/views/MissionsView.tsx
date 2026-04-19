@@ -37,6 +37,13 @@ export interface ActiveMission {
     endTimeEpoch: number;
     isResolved: boolean;
     wasSuccessful: boolean;
+    // Functional Fix: These fields ensure rewards display correctly in the modal
+    rewardGold: number;
+    rewardGems: number;
+    rewardFood: number;
+    rewardWood: number;
+    rewardStone: number;
+    rewardExp: number;
     partyMembers: { characterId: string; name: string; portraitUrl: string; flavorQuipsJson: string }[];
 }
 
@@ -362,12 +369,12 @@ export default function MissionsView() {
                             <>
                                 <p style={{ color: 'var(--text-secondary)' }}>The mission was a success! Your heroes return with the following spoils:</p>
                                 <div className="loot-display-grid">
-                                    <div className="loot-item"><Icon name="gold" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.rewardGold || 0}</div>
-                                    <div className="loot-item"><Icon name="gems" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.rewardGems || 0}</div>
-                                    <div className="loot-item"><Icon name="food" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.rewardFood || 0}</div>
-                                    <div className="loot-item"><Icon name="wood" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.rewardWood || 0}</div>
-                                    <div className="loot-item"><Icon name="stone" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.rewardStone || 0}</div>
-                                    <div className="loot-item" style={{ color: 'var(--accent-blue)' }}><Icon name="user" size={24} /> {quests.find(q => q.title === resultMission.questTitle)?.baseExp || 0} EXP</div>
+                                    <div className="loot-item"><Icon name="gold" size={24} /> {resultMission.rewardGold}</div>
+                                    <div className="loot-item"><Icon name="gems" size={24} /> {resultMission.rewardGems}</div>
+                                    <div className="loot-item"><Icon name="food" size={24} /> {resultMission.rewardFood}</div>
+                                    <div className="loot-item"><Icon name="wood" size={24} /> {resultMission.rewardWood}</div>
+                                    <div className="loot-item"><Icon name="stone" size={24} /> {resultMission.rewardStone}</div>
+                                    <div className="loot-item" style={{ color: 'var(--accent-blue)' }}><Icon name="user" size={24} /> {resultMission.rewardExp} EXP</div>
                                 </div>
                             </>
                         ) : (
