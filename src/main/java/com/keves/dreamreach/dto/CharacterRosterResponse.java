@@ -42,6 +42,7 @@ public class CharacterRosterResponse {
     private String manaSlotsJson;
     private String status;
     private Long lastRestTickEpoch;
+    private Long longRestEndTimeEpoch;
     private String weaponTier;
     private String armorTier;
     private String portraitUrl;
