@@ -369,12 +369,24 @@ export default function MissionsView() {
                             <>
                                 <p style={{ color: 'var(--text-secondary)' }}>The mission was a success! Your heroes return with the following spoils:</p>
                                 <div className="loot-display-grid">
-                                    <div className="loot-item"><Icon name="gold" size={24} /> {resultMission.rewardGold}</div>
-                                    <div className="loot-item"><Icon name="gems" size={24} /> {resultMission.rewardGems}</div>
-                                    <div className="loot-item"><Icon name="food" size={24} /> {resultMission.rewardFood}</div>
-                                    <div className="loot-item"><Icon name="wood" size={24} /> {resultMission.rewardWood}</div>
-                                    <div className="loot-item"><Icon name="stone" size={24} /> {resultMission.rewardStone}</div>
-                                    <div className="loot-item" style={{ color: 'var(--accent-blue)' }}><Icon name="user" size={24} /> {resultMission.rewardExp} EXP</div>
+                                    {resultMission.rewardGold > 0 && (
+                                        <div className="loot-item"><Icon name="gold" size={24} /> {resultMission.rewardGold}</div>
+                                    )}
+                                    {resultMission.rewardGems > 0 && (
+                                        <div className="loot-item"><Icon name="gems" size={24} /> {resultMission.rewardGems}</div>
+                                    )}
+                                    {resultMission.rewardFood > 0 && (
+                                        <div className="loot-item"><Icon name="food" size={24} /> {resultMission.rewardFood}</div>
+                                    )}
+                                    {resultMission.rewardWood > 0 && (
+                                        <div className="loot-item"><Icon name="wood" size={24} /> {resultMission.rewardWood}</div>
+                                    )}
+                                    {resultMission.rewardStone > 0 && (
+                                        <div className="loot-item"><Icon name="stone" size={24} /> {resultMission.rewardStone}</div>
+                                    )}
+                                    {resultMission.rewardExp > 0 && (
+                                        <div className="loot-item" style={{ color: 'var(--accent-blue)' }}><Icon name="user" size={24} /> {resultMission.rewardExp} EXP</div>
+                                    )}
                                 </div>
                             </>
                         ) : (
