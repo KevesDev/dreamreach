@@ -55,7 +55,7 @@ public class PlayerController {
 
         economyService.updateProductionState(profile);
         tavernService.processArrivals(profile);
-        trainingService.processCompletedTraining(profile); // Race condition lazy eval fix
+        trainingService.processCompletedTraining(profile);
 
         PlayerPopulation pop = profile.getPopulation();
         int keepLevel = profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("keep")).mapToInt(BuildingInstance::getLevel).max().orElse(1);
@@ -77,15 +77,25 @@ public class PlayerController {
                 TrainingConfigResponse.builder().professionType("baker").goldCost(economyConfig.getCostTrainBakerGold()).foodCost(economyConfig.getCostTrainBakerFood()).trainTimeSeconds(economyConfig.getTrainTimeBakerSeconds()).build()
         );
 
+        List<BuildingConfigResponse> buildingConfigs = List.of(
+                BuildingConfigResponse.builder().buildingType("house").woodCost(economyConfig.getCostHouseWood()).stoneCost(economyConfig.getCostHouseStone()).buildTimeSeconds(economyConfig.getBuildTimeHouse()).maxWorkers(0).productionRate(0).unlockKeepLevel(1).build(),
+                BuildingConfigResponse.builder().buildingType("bakery").woodCost(economyConfig.getCostBakeryWood()).stoneCost(economyConfig.getCostBakeryStone()).buildTimeSeconds(economyConfig.getBuildTimeBakery()).maxWorkers(economyConfig.getMaxWorkersBakery()).productionRate(economyConfig.getFoodPerBaker()).unlockKeepLevel(1).build(),
+                BuildingConfigResponse.builder().buildingType("lodge").woodCost(economyConfig.getCostLodgeWood()).stoneCost(economyConfig.getCostLodgeStone()).buildTimeSeconds(economyConfig.getBuildTimeLodge()).maxWorkers(economyConfig.getMaxWorkersLodge()).productionRate(economyConfig.getFoodPerHunter()).unlockKeepLevel(1).build(),
+                BuildingConfigResponse.builder().buildingType("tavern").woodCost(economyConfig.getCostTavernWood()).stoneCost(economyConfig.getCostTavernStone()).buildTimeSeconds(economyConfig.getBuildTimeTavern()).maxWorkers(0).productionRate(0).unlockKeepLevel(economyConfig.getTavernUnlockLevel()).build()
+        );
+
         PlayerProfileResponse response = PlayerProfileResponse.builder()
                 .email(account.getEmail()).displayName(account.getProfile().getDisplayName()).pvpEnabled(account.getProfile().isEffectivelyPvpEnabled()).isAdmin(account.isAdmin())
                 .food(profile.getResources() != null ? profile.getResources().getFood() : 0).wood(profile.getResources() != null ? profile.getResources().getWood() : 0).stone(profile.getResources() != null ? profile.getResources().getStone() : 0).gold(profile.getResources() != null ? profile.getResources().getGold() : 0).gems(profile.getResources() != null ? profile.getResources().getGems() : 0)
                 .foodRate(foodRate).woodRate(woodRate).stoneRate(stoneRate)
                 .pendingFood(profile.getResources() != null ? profile.getResources().getPendingFood() : 0).pendingWood(profile.getResources() != null ? profile.getResources().getPendingWood() : 0).pendingStone(profile.getResources() != null ? profile.getResources().getPendingStone() : 0).pendingGold(profile.getResources() != null ? profile.getResources().getPendingGold() : 0)
+                .happiness(profile.getHappiness()).maxHappiness(economyConfig.getMaxHappiness())
+                .taxBracket(profile.getTaxBracket()).lastTaxCollectionTimeEpoch(profile.getLastTaxCollectionTime() != null ? profile.getLastTaxCollectionTime().toEpochMilli() : 0)
                 .totalPopulation(profile.getPopulation() != null ? profile.getPopulation().getTotalPopulation() : 0).maxPopulation(calculatedMaxPop)
                 .idlePeasants(pop != null ? pop.getIdlePeasants() : 0).woodcutters(pop != null ? pop.getWoodcutters() : 0).stoneworkers(pop != null ? pop.getStoneworkers() : 0).hunters(pop != null ? pop.getHunters() : 0).bakers(pop != null ? pop.getBakers() : 0)
                 .keepLevel(keepLevel).maxStorage(maxStorage).houses(houseCount)
-                .buildings(buildingResponses).activeConstructions(activeTasks).activeTrainingTasks(activeTrainingTasks).trainingConfigs(trainingConfigs)
+                .buildings(buildingResponses).activeConstructions(activeTasks).activeTrainingTasks(activeTrainingTasks)
+                .trainingConfigs(trainingConfigs).buildingConfigs(buildingConfigs)
                 .build();
         return ResponseEntity.ok(response);
     }
