@@ -15,16 +15,17 @@
   --accent-blue: #4ea1ff;
   --accent-green: #5cc48d;
   --accent-red: #e05a5a;
+
+  /* Semantic Aliases - Fixes the "Empty" Vault bars and build errors */
+  --success: var(--accent-green);
+  --danger: var(--accent-red);
+  --warning: var(--accent-gold);
+
   --space-md: 16px;
   --space-lg: 24px;
   --font-heading: 'Cinzel', serif;
   --font-body: 'Inter', sans-serif;
 }
-
-/* Semantic Aliases for vault bars */
---success: var(--accent-green);
---danger: var(--accent-red);
---warning: var(--accent-gold);
 
 body {
   margin: 0;
@@ -42,7 +43,7 @@ h1, h2, h3 {
 /* TOP HUD Styles */
 .hud {
   height: 50px;
-  min-height: 50px; /* Force visibility */
+  min-height: 50px;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
@@ -110,7 +111,7 @@ h1, h2, h3 {
 
 .button--claim:hover {
   background-color: var(--accent-gold);
-  color: #000; /* Dark text for contrast on hover */
+  color: #000;
   box-shadow: 0 0 25px rgba(212, 175, 55, 1);
   transform: translateY(-2px);
 }
@@ -120,11 +121,11 @@ h1, h2, h3 {
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: var(--space-md);
-  box-sizing: border-box; /* Add this */
+  box-sizing: border-box;
 }
 
 .panel--elevated {
   background: var(--bg-elevated);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  box-sizing: border-box; /* Add this */
+  box-sizing: border-box;
 }
