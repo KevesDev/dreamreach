@@ -55,7 +55,7 @@ public class MissionService {
         completedRepo.findByProfileId(profile.getId()).forEach(c -> excludedIds.add(c.getQuestTemplate().getId()));
 
         return questRepo.findAll().stream()
-                .filter(q -> !excludedIds.contains(q.getId()))
+                .filter(q -> q.isPublished() && !excludedIds.contains(q.getId()))
                 .collect(Collectors.toList());
     }
 

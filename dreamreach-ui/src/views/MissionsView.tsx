@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import api from '../api/client';
 import { Icon } from '../components/Icon';
 import './MissionsView.css';
@@ -52,7 +52,7 @@ export default function MissionsView() {
     const fetchAllData = useCallback(() => {
         return Promise.all([
             api.get('/roster'),
-            api.get('/missions/journal'), // Pulling exclusively from AcceptedMissions
+            api.get('/missions/journal'),
             api.get('/missions/active')
         ]).then(([rosterRes, questsRes, activeRes]) => {
             setRoster(rosterRes.data);
@@ -181,8 +181,7 @@ export default function MissionsView() {
 
                             {quests.length === 0 ? (
                                 <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                    <p>Your journal is empty.</p>
-                                    <Link to="/board" className="button" style={{display: 'inline-block', marginTop: '10px'}}>Visit Adventurer's Board</Link>
+                                    <p>Your journal is empty. Accept missions from the Adventurer's Board.</p>
                                 </div>
                             ) : (
                                 <div className="quest-list">

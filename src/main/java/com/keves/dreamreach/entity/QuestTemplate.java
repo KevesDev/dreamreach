@@ -44,5 +44,8 @@ public class QuestTemplate {
     @Column(name = "reward_food") private Integer rewardFood = 0;
     @Column(name = "reward_wood") private Integer rewardWood = 0;
     @Column(name = "reward_stone") private Integer rewardStone = 0;
-    @Column(name = "duration_hours") private Integer durationHours = 4;
+
+    @Column(name = "duration_hours") private Integer durationHours = 2;
+
+    @Column(name = "is_published") private boolean published = true;
 }
