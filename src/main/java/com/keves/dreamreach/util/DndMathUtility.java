@@ -1,9 +1,7 @@
 package com.keves.dreamreach.util;
 
 import com.keves.dreamreach.enums.Rarity;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class DndMathUtility {
 
@@ -54,43 +52,51 @@ public class DndMathUtility {
     }
 
     /**
-     * Generates a set of 6 D&D ability scores, scaled by the character's gacha rarity.
-     * Higher rarities use generous rolling rules and guarantee a high primary stat.
+     * Generates a hero's stat block using Priority Mapping.
+     * 1. Rolls 6 values using 3d6 (Standard) or 4d6 Drop Lowest (Heroic).
+     * 2. Applies Rarity-based BST (Base Stat Total) floors.
+     * 3. Clamps every stat to a minimum Heroic Floor of 8.
+     * 4. Maps sorted values to the template priority list.
      */
-    public static Map<String, Integer> generateRolledStats(String primaryStat, Rarity rarity) {
-        Map<String, Integer> stats = new HashMap<>();
-        String[] attributes = {"STR", "DEX", "CON", "INT", "WIS", "CHA"};
-
-        for (String attr : attributes) {
-            int score;
+    public static Map<String, Integer> generateHeroStats(List<String> priorityOrder, Rarity rarity) {
+        List<Integer> pool = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            int roll;
             if (rarity == Rarity.COMMON || rarity == Rarity.UNCOMMON) {
-                score = rollNd6(3); // Standard 3d6 (Mean ~10.5)
+                roll = rollNd6(3);
             } else {
-                score = roll4d6DropLowest(); // Heroic 4d6 drop lowest (Mean ~12.2)
+                roll = roll4d6DropLowest();
             }
-            stats.put(attr, score);
+            pool.add(Math.max(8, roll)); // Heroic hard floor of 8
         }
 
-        // Enforce Rarity-based primary stat guarantees
-        int currentPrimary = stats.getOrDefault(primaryStat, 10);
-        switch (rarity) {
-            case UNCOMMON:
-                if (currentPrimary < 12) stats.put(primaryStat, 12);
-                break;
-            case RARE:
-                if (currentPrimary < 14) stats.put(primaryStat, 14);
-                break;
-            case EPIC:
-                if (currentPrimary < 16) stats.put(primaryStat, 16);
-                break;
-            case LEGENDARY:
-                if (currentPrimary < 18) stats.put(primaryStat, 18);
-                break;
-            default:
-                break;
+        // Apply Rarity BST Floors to ensure quality scaling
+        int bstFloor = switch (rarity) {
+            case COMMON -> 60;
+            case UNCOMMON -> 70;
+            case RARE -> 78;
+            case EPIC -> 84;
+            case LEGENDARY -> 90;
+        };
+
+        int currentBst = pool.stream().mapToInt(Integer::intValue).sum();
+        if (currentBst < bstFloor) {
+            int deficit = bstFloor - currentBst;
+            pool.sort(Collections.reverseOrder());
+            // Buff the top stats to guarantee power where it matters
+            pool.set(0, pool.get(0) + (deficit / 2));
+            pool.set(1, pool.get(1) + (deficit / 2 + deficit % 2));
         }
 
-        return stats;
+        pool.sort(Collections.reverseOrder());
+        Map<String, Integer> finalStats = new HashMap<>();
+
+        // Map the sorted pool to the priority list defined in the Forge
+        for (int i = 0; i < priorityOrder.size(); i++) {
+            finalStats.put(priorityOrder.get(i).toUpperCase(), pool.get(i));
+        }
+
+        return finalStats;
     }
 
     private static int rollNd6(int n) {
