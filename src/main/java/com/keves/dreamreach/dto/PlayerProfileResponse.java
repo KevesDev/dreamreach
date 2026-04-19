@@ -17,6 +17,7 @@ public class PlayerProfileResponse {
     private String email;
     private String displayName;
     private boolean pvpEnabled;
+    private boolean isAdmin; // Tells the React UI to show the Admin tools
 
     // Resources
     private int food;

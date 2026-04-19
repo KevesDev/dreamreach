@@ -185,6 +185,12 @@ export default function Layout() {
                     <Link to="/shop" className={`list-item ${location.pathname === '/shop' ? 'active' : ''}`}>
                         <Icon name="shop" size={18} style={{ marginRight: '12px' }} /> Shop
                     </Link>
+
+                    {profile?.isAdmin && (
+                        <Link to="/admin" className={`list-item ${location.pathname === '/admin' ? 'active' : ''}`} style={{ marginTop: 'auto', borderTop: '1px solid var(--border-subtle)' }}>
+                            <Icon name="user" size={18} style={{ marginRight: '12px' }} /> Admin
+                        </Link>
+                    )}
                 </nav>
 
                 <main style={{ flex: 1, padding: 'var(--space-md)', overflowY: 'auto' }}>

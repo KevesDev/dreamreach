@@ -5,6 +5,7 @@ import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import KingdomView from './views/KingdomView';
 import HeroesView from './views/HeroesView';
+import AdminView from './views/AdminView';
 import Layout from './components/Layout';
 
 // Placeholder component for the Shop
@@ -23,6 +24,7 @@ export default function App() {
                     <Route path="/kingdom" element={<KingdomView />} />
                     <Route path="/heroes" element={<HeroesView />} />
                     <Route path="/shop" element={<ShopPlaceholder />} />
+                    <Route path="/admin" element={<AdminView />} />
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 </Route>
 
