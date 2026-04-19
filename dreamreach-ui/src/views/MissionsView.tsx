@@ -18,6 +18,7 @@ export interface Quest {
     type: string;
     title: string;
     description: string;
+    durationHours: number;
 }
 
 export interface ActiveMission {
@@ -171,7 +172,7 @@ export default function MissionsView() {
                     <>
                         <aside className="ledger-pane">
                             <div className="ledger-header">
-                                <h2>Mission Journal</h2>
+                                <h2>Quest Journal</h2>
                             </div>
                             <div className="quest-list">
                                 {quests.map(quest => (
@@ -189,14 +190,14 @@ export default function MissionsView() {
                                         <div className={`success-indicator ${getSuccessColorClass()}`}>Success Chance: {successChance}%</div>
                                     </>
                                 ) : (
-                                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', margin: 'auto 0' }}>Select a mission.</div>
+                                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', margin: 'auto 0' }}>Select a quest.</div>
                                 )}
                             </div>
                         </aside>
 
                         <main className="assembly-pane">
                             <div className="party-slots-container">
-                                <h3 style={{ color: 'var(--text-primary)', marginBottom: 'var(--space-lg)' }}>Active Missions</h3>
+                                <h3 style={{ color: 'var(--text-primary)', marginBottom: 'var(--space-lg)' }}>Party Muster</h3>
                                 <div className="party-slots-grid">
                                     {partySlots.map((slot, index) => (
                                         <div key={index} className={`party-slot ${slot ? 'filled' : 'empty'}`} onClick={() => slot && removeFromSlot(index)}>
@@ -241,7 +242,7 @@ export default function MissionsView() {
                             <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '40px' }}>
                                 <Icon name="kingdom" size={48} />
                                 <h2>No Active Expeditions</h2>
-                                <p>Your heroes rest. Assemble a party and dispatch them from the Quest Journal.</p>
+                                <p>Your armies rest. Assemble a party and dispatch them from the Quest Journal.</p>
                                 <button className="button" style={{marginTop: '10px'}} onClick={fetchAllData}>Refresh Radar</button>
                             </div>
                         ) : (
@@ -272,7 +273,6 @@ export default function MissionsView() {
                 )}
             </div>
 
-            {/* Dispatch Confirmation Modal */}
             {showModal && (
                 <div className="modal-overlay">
                     <div className="modal-content">
@@ -285,13 +285,13 @@ export default function MissionsView() {
                                 Success Chance: {successChance}%
                             </div>
                             <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-                                Duration: 4 Hours
+                                Duration: {selectedQuest?.durationHours || 4} Hours (XP & Loot awarded upon safe return)
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                             <button className="button button--danger" onClick={() => setShowModal(false)}>Cancel</button>
                             <button className="button button--claim" onClick={handleDispatch} disabled={isDispatching}>
-                                {isDispatching ? 'Deploying...' : 'Send Party'}
+                                {isDispatching ? 'Deploying...' : 'Confirm & Send'}
                             </button>
                         </div>
                     </div>

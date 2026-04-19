@@ -15,10 +15,10 @@ public class GameEconomyConfig {
 
     // --- STARTING CONDITIONS ---
     private int startingFood = 150;
-    private int startingWood = 150;
-    private int startingStone = 100;
-    private int startingGold = 20;
-    private int startingGems = 0;
+    private int startingWood = 250;
+    private int startingStone = 200;
+    private int startingGold = 200;
+    private int startingGems = 2;
 
     private int startingHappiness = 50;
     private int startingPeasants = 5;
@@ -103,7 +103,7 @@ public class GameEconomyConfig {
     private int tavernUnlockLevel = 1;
 
     // How often (in minutes) the server calculates if a hero arrived
-    private int tavernCheckIntervalMinutes = 2;
+    private int tavernCheckIntervalMinutes = 5;
 
     // The percentage chance (0.0 to 1.0) per interval that an empty slot gets a hero
     private double tavernArrivalChance = 0.3;
