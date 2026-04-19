@@ -47,6 +47,9 @@ public class PlayerCharacter {
     @Column(name = "current_xp", nullable = false)
     private int currentXp = 0;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @Column(name = "current_hp", nullable = false)
     private int currentHp = 10;
 
@@ -59,11 +62,20 @@ public class PlayerCharacter {
     @Column(name = "max_mana", nullable = false)
     private int maxMana = 0;
 
+    @Column(name = "mana_slots_json", columnDefinition = "TEXT")
+    private String manaSlotsJson;
+
     @Column(name = "spent_hit_dice", nullable = false)
     private int spentHitDice = 0;
 
+    @Column(name = "max_hit_dice", nullable = false)
+    private int maxHitDice = 1;
+
     @Column(name = "status", nullable = false, length = 20)
     private String status = "IDLE";
+
+    @Column(name = "last_rest_tick")
+    private Instant lastRestTick = Instant.now();
 
     @Column(name = "long_rest_end_time")
     private Instant longRestEndTime;

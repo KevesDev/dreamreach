@@ -16,6 +16,7 @@ public class CharacterRosterResponse {
     private String dndClass;
     private int level;
     private int currentXp;
+    private String description;
 
     // Base Stats
     private int totalStrength;
@@ -37,7 +38,10 @@ public class CharacterRosterResponse {
     private int currentHp;
     private int maxHp;
     private int spentHitDice;
+    private int maxHitDice;
+    private String manaSlotsJson;
     private String status;
+    private Long lastRestTickEpoch;
     private String weaponTier;
     private String armorTier;
     private String portraitUrl;

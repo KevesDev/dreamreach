@@ -52,6 +52,7 @@ public class DataSeeder implements CommandLineRunner {
                             t.setPortraitUrl("/assets/hero.png");
                             t.setBaseGoldCost(300);
                             t.setBaseGemCost(30);
+                            t.setDescription("A mystic from the deep caverns who communes with ancestral spirits to mend the wounded and curse the wicked.");
                             return characterTemplateRepository.save(t);
                         });
 
@@ -73,6 +74,7 @@ public class DataSeeder implements CommandLineRunner {
                             t.setPortraitUrl("/assets/hero.png");
                             t.setBaseGoldCost(150);
                             t.setBaseGemCost(15);
+                            t.setDescription("A steadfast warrior wielding iron and grit. Relies on heavy armor and martial discipline to hold the line.");
                             return characterTemplateRepository.save(t);
                         });
 
@@ -94,6 +96,7 @@ public class DataSeeder implements CommandLineRunner {
                             t.setPortraitUrl("/assets/hero.png");
                             t.setBaseGoldCost(1000);
                             t.setBaseGemCost(100);
+                            t.setDescription("An ancient scholar who has mastered the destructive forces of the arcane. Their spells can decimate entire battlefields.");
                             return characterTemplateRepository.save(t);
                         });
 
