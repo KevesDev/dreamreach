@@ -44,6 +44,11 @@ export default function Layout() {
                 const stonePerSec = (prevProfile.stoneRate || 0) / 3600;
                 const foodPerSec = (prevProfile.foodRate || 0) / 3600;
 
+                // Sync the production state with the original accumulator reference
+                accumulatorRef.current.wood += woodPerSec * dtSeconds;
+                accumulatorRef.current.stone += stonePerSec * dtSeconds;
+                accumulatorRef.current.food += foodPerSec * dtSeconds;
+
                 // We allow the pending values in state to hold decimals.
                 // This allows the Keep progress bars to update smoothly in real-time.
                 const newPendingWood = prevProfile.pendingWood + (woodPerSec * dtSeconds);
