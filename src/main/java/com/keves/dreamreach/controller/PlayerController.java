@@ -173,6 +173,7 @@ public class PlayerController {
                 .email(account.getEmail())
                 .displayName(account.getProfile().getDisplayName())
                 .pvpEnabled(account.getProfile().isEffectivelyPvpEnabled())
+                .isAdmin(account.isAdmin())
 
                 .food(profile.getResources() != null ? profile.getResources().getFood() : 0)
                 .wood(profile.getResources() != null ? profile.getResources().getWood() : 0)
