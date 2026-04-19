@@ -21,6 +21,11 @@
   --font-body: 'Inter', sans-serif;
 }
 
+/* Semantic Aliases for vault bars */
+--success: var(--accent-green);
+--danger: var(--accent-red);
+--warning: var(--accent-gold);
+
 body {
   margin: 0;
   background-color: var(--bg-main);
