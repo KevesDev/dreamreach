@@ -10,10 +10,12 @@ import com.keves.dreamreach.exception.ResourceNotFoundException;
 import com.keves.dreamreach.repository.ConstructionTaskRepository;
 import com.keves.dreamreach.repository.PlayerAccountRepository;
 import com.keves.dreamreach.repository.TrainingTaskRepository;
+import com.keves.dreamreach.service.AccountCleanupService;
 import com.keves.dreamreach.service.EconomyService;
 import com.keves.dreamreach.service.TavernService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,19 +36,22 @@ public class PlayerController {
     private final ConstructionTaskRepository constructionTaskRepository;
     private final TrainingTaskRepository trainingTaskRepository;
     private final TavernService tavernService;
+    private final AccountCleanupService cleanupService;
 
     public PlayerController(PlayerAccountRepository accountRepository,
                             GameEconomyConfig economyConfig,
                             EconomyService economyService,
                             ConstructionTaskRepository constructionTaskRepository,
                             TrainingTaskRepository trainingTaskRepository,
-                            TavernService tavernService) {
+                            TavernService tavernService,
+                            AccountCleanupService cleanupService) {
         this.accountRepository = accountRepository;
         this.economyConfig = economyConfig;
         this.economyService = economyService;
         this.constructionTaskRepository = constructionTaskRepository;
         this.trainingTaskRepository = trainingTaskRepository;
         this.tavernService = tavernService;
+        this.cleanupService = cleanupService;
     }
 
     @GetMapping("/me")
@@ -58,13 +63,11 @@ public class PlayerController {
 
         PlayerProfile profile = account.getProfile();
 
-        // Run the "lazy checks" to process offline time for the economy and the Tavern
         economyService.updateProductionState(profile);
         tavernService.processArrivals(profile);
 
         PlayerPopulation pop = profile.getPopulation();
 
-        // Calculate actual keep level
         int keepLevel = profile.getBuildings().stream()
                 .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
                 .mapToInt(BuildingInstance::getLevel)
@@ -80,7 +83,6 @@ public class PlayerController {
         int woodRate = (pop != null ? pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter() : 0) + economyConfig.getBasePassiveWood();
         int stoneRate = (pop != null ? pop.getStoneworkers() * economyConfig.getStonePerStoneworker() : 0) + economyConfig.getBasePassiveStone();
 
-        // Map real database building instances to Response DTOs
         List<BuildingInstanceResponse> buildingResponses = profile.getBuildings().stream()
                 .map(b -> BuildingInstanceResponse.builder()
                         .id(b.getId())
@@ -216,5 +218,17 @@ public class PlayerController {
                 .build();
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Irreversibly deletes the authenticated user's account and all associated game data.
+     */
+    @DeleteMapping("/me")
+    public ResponseEntity<?> deleteMyAccount(Authentication authentication) {
+        PlayerAccount account = accountRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found."));
+
+        cleanupService.deleteAccountAndAllRelationalData(account);
+        return ResponseEntity.ok().build();
     }
 }
