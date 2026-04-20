@@ -61,7 +61,8 @@ const emptyHero: AdminHero = {
     tavernWeight: 10
 };
 
-const DND_CLASSES = ['FIGHTER', 'WIZARD', 'CLERIC', 'ROGUE', 'RANGER', 'PALADIN', 'BARD', 'WARLOCK', 'SORCERER', 'DRUID', 'BARBARIAN', 'MONK'];
+// ARTIFICER added to the front-end list here
+const DND_CLASSES = ['FIGHTER', 'WIZARD', 'CLERIC', 'ROGUE', 'RANGER', 'PALADIN', 'BARD', 'WARLOCK', 'SORCERER', 'DRUID', 'BARBARIAN', 'MONK', 'ARTIFICER'];
 const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
 const STAT_OPTIONS = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
 
