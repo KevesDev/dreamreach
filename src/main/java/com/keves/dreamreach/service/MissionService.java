@@ -2,6 +2,8 @@ package com.keves.dreamreach.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.keves.dreamreach.config.GameEconomyConfig;
+import com.keves.dreamreach.config.GameLedgerConfig;
 import com.keves.dreamreach.config.GameQuestConfig;
 import com.keves.dreamreach.dto.ActiveMissionResponse;
 import com.keves.dreamreach.entity.*;
@@ -27,13 +29,18 @@ public class MissionService {
     private final AcceptedMissionRepository acceptedRepo;
     private final CompletedMissionRepository completedRepo;
     private final GameQuestConfig config;
+    private final GameEconomyConfig economyConfig;
+    private final GameLedgerConfig ledgerConfig;
+    private final LedgerService ledgerService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Random random = new Random();
 
     public MissionService(QuestTemplateRepository questRepo, PlayerCharacterRepository charRepo,
                           PartyRepository partyRepo, PlayerProfileRepository profileRepo,
                           ActiveMissionRepository activeMissionRepo, AcceptedMissionRepository acceptedRepo,
-                          CompletedMissionRepository completedRepo, GameQuestConfig config) {
+                          CompletedMissionRepository completedRepo, GameQuestConfig config,
+                          GameEconomyConfig economyConfig, GameLedgerConfig ledgerConfig,
+                          LedgerService ledgerService) {
         this.questRepo = questRepo;
         this.charRepo = charRepo;
         this.partyRepo = partyRepo;
@@ -42,6 +49,9 @@ public class MissionService {
         this.acceptedRepo = acceptedRepo;
         this.completedRepo = completedRepo;
         this.config = config;
+        this.economyConfig = economyConfig;
+        this.ledgerConfig = ledgerConfig;
+        this.ledgerService = ledgerService;
     }
 
     @Transactional
@@ -196,10 +206,16 @@ public class MissionService {
         activeMission.setQuestTemplate(quest);
         activeMission.setSuccessChance(calculateSuccessChance(characterIds, questId));
         activeMission.setDispatchTime(Instant.now());
-        activeMission.setEndTime(Instant.now().plus(quest.getDurationHours() != null ? quest.getDurationHours() : 4, ChronoUnit.HOURS));
+        activeMission.setEndTime(Instant.now().plus(quest.getDurationHours() != null ? quest.getDurationHours() : 2, ChronoUnit.HOURS));
 
         activeMissionRepo.save(activeMission);
         acceptedRepo.delete(accepted);
+
+        // Record the event in the Ledger using dynamic config
+        String message = ledgerConfig.getMissionDispatchMessage()
+                .replace("{count}", String.valueOf(characterIds.size()))
+                .replace("{questTitle}", quest.getTitle());
+        ledgerService.appendLog(profile, "MILITARY", message);
     }
 
     @Transactional
@@ -226,7 +242,6 @@ public class MissionService {
                     .endTimeEpoch(mission.getEndTime().toEpochMilli())
                     .isResolved(mission.isResolved())
                     .wasSuccessful(mission.isWasSuccessful())
-                    // Map rewards directly into the response so UI can show them without lookup
                     .rewardGold(qt.getRewardGold() != null ? qt.getRewardGold() : 0)
                     .rewardGems(qt.getRewardGems() != null ? qt.getRewardGems() : 0)
                     .rewardFood(qt.getRewardFood() != null ? qt.getRewardFood() : 0)
@@ -244,6 +259,7 @@ public class MissionService {
         Instant now = Instant.now();
 
         for (ActiveMission mission : missions) {
+            // Only process missions whose timers have expired but aren't flagged as resolved yet
             if (now.isBefore(mission.getEndTime()) || mission.isResolved()) continue;
 
             boolean success = (random.nextInt(100) + 1) <= mission.getSuccessChance();
@@ -272,11 +288,30 @@ public class MissionService {
 
         if (mission.isWasSuccessful()) {
             PlayerResources resources = profile.getResources();
+
+            // Calculate current max storage limit based on Keep Level
+            int keepLevel = profile.getBuildings().stream()
+                    .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
+                    .mapToInt(BuildingInstance::getLevel)
+                    .max().orElse(1);
+            int maxStorage = keepLevel * economyConfig.getBaseStoragePerKeepLevel();
+
+            int foodReward = quest.getRewardFood() != null ? quest.getRewardFood() : 0;
+            int woodReward = quest.getRewardWood() != null ? quest.getRewardWood() : 0;
+            int stoneReward = quest.getRewardStone() != null ? quest.getRewardStone() : 0;
+
+            // Enforce storage caps specifically for hard-capped resources
+            int actualFoodToAdd = foodReward > 0 ? Math.min(foodReward, Math.max(0, maxStorage - resources.getFood())) : 0;
+            int actualWoodToAdd = woodReward > 0 ? Math.min(woodReward, Math.max(0, maxStorage - resources.getWood())) : 0;
+            int actualStoneToAdd = stoneReward > 0 ? Math.min(stoneReward, Math.max(0, maxStorage - resources.getStone())) : 0;
+
+            // Gold and Gems have no ceiling constraint
             resources.setGold(resources.getGold() + (quest.getRewardGold() != null ? quest.getRewardGold() : 0));
             resources.setGems(resources.getGems() + (quest.getRewardGems() != null ? quest.getRewardGems() : 0));
-            resources.setFood(resources.getFood() + (quest.getRewardFood() != null ? quest.getRewardFood() : 0));
-            resources.setWood(resources.getWood() + (quest.getRewardWood() != null ? quest.getRewardWood() : 0));
-            resources.setStone(resources.getStone() + (quest.getRewardStone() != null ? quest.getRewardStone() : 0));
+
+            resources.setFood(resources.getFood() + actualFoodToAdd);
+            resources.setWood(resources.getWood() + actualWoodToAdd);
+            resources.setStone(resources.getStone() + actualStoneToAdd);
 
             int xpShare = (quest.getBaseExp() != null && !characters.isEmpty()) ? (quest.getBaseExp() / characters.size()) : 0;
 
@@ -291,6 +326,12 @@ public class MissionService {
             cm.setProfile(profile);
             cm.setQuestTemplate(quest);
             completedRepo.save(cm);
+
+            // Record victory in the Ledger using dynamic config
+            String message = ledgerConfig.getMissionSuccessMessage()
+                    .replace("{questTitle}", quest.getTitle());
+            ledgerService.appendLog(profile, "MILITARY", message);
+
         } else {
             for (PlayerCharacter pc : characters) {
                 pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - Math.max(1, (int) (pc.getMaxHp() * 0.90))));
@@ -301,6 +342,11 @@ public class MissionService {
             am.setProfile(profile);
             am.setQuestTemplate(quest);
             acceptedRepo.save(am);
+
+            // Record defeat in the Ledger using dynamic config
+            String message = ledgerConfig.getMissionFailureMessage()
+                    .replace("{questTitle}", quest.getTitle());
+            ledgerService.appendLog(profile, "CRISIS", message);
         }
 
         charRepo.saveAll(characters);

@@ -2,6 +2,7 @@ package com.keves.dreamreach.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -74,4 +75,16 @@ public class PlayerProfileResponse {
 
     // Added to pass dynamic building costs/timers to the UI
     private List<BuildingConfigResponse> buildingConfigs;
+
+    // The Kingdom's historical event log
+    private List<LedgerEventResponse> ledgerEvents;
+
+    @Data
+    @Builder
+    public static class LedgerEventResponse {
+        private String id;
+        private long timestampEpoch;
+        private String category;
+        private String message;
+    }
 }

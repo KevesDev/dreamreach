@@ -87,6 +87,14 @@ export interface PlayerProfile {
     activeTrainingTasks?: TrainingTaskResponse[];
     trainingConfigs?: TrainingConfigResponse[];
     buildingConfigs?: BuildingConfigResponse[];
+
+    // NEW: Ledger History
+    ledgerEvents?: {
+        id: string;
+        timestampEpoch: number;
+        category: string;
+        message: string;
+    }[];
 }
 
 export interface BuildingCost {
@@ -111,7 +119,7 @@ export interface KingdomEvent {
     id: string;
     timestamp: string;
     message: string;
-    type: 'good' | 'bad' | 'neutral';
+    type: string;
 }
 
 // DTO for the hero waiting in the Tavern
@@ -249,7 +257,19 @@ export default function KingdomView() {
     // Dynamically derive the selected group object from the freshly mapped buildingGroups array
     const selectedGroup = buildingGroups.find(g => g.type === selectedGroupType) || null;
 
-    const events: KingdomEvent[] = [{ id: 'e5', timestamp: '06:00', message: 'A new day dawns over the kingdom.', type: 'neutral' }];
+    // Map backend ledger timestamps to the requested roleplay style
+    const formatTimestamp = (epoch: number) => {
+        const d = new Date(epoch);
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${pad(d.getMonth() + 1)}.${pad(d.getDate())}.${d.getFullYear()} | ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    const events: KingdomEvent[] = (profile?.ledgerEvents || []).map(e => ({
+        id: e.id,
+        timestamp: formatTimestamp(e.timestampEpoch),
+        message: e.message,
+        type: e.category
+    }));
 
     const handleConstruct = async (type: string) => {
         if (isBusy) return;

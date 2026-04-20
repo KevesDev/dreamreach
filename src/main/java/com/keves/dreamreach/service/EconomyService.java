@@ -344,6 +344,7 @@ public class EconomyService {
 
     /**
      * Validates the 1-hour cooldown and moves pending gold into the spendable treasury.
+     * Note: Gold accrual explicitly bypasses storage capacity caps.
      */
     @Transactional
     public void collectTaxes(PlayerProfile profile) {
@@ -358,16 +359,9 @@ public class EconomyService {
 
         PlayerResources res = profile.getResources();
 
-        int keepLevel = profile.getBuildings().stream()
-                .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
-                .mapToInt(BuildingInstance::getLevel)
-                .max().orElse(1);
-        int maxStorage = keepLevel * economyConfig.getBaseStoragePerKeepLevel();
-
         int claimGold = (int) res.getPendingGold();
-        int actualGoldToAdd = claimGold > 0 ? Math.min(claimGold, Math.max(0, maxStorage - res.getGold())) : claimGold;
 
-        res.setGold(Math.max(0, res.getGold() + actualGoldToAdd));
+        res.setGold(Math.max(0, res.getGold() + claimGold));
         res.setPendingGold(res.getPendingGold() - claimGold);
 
         profile.setLastTaxCollectionTime(now);

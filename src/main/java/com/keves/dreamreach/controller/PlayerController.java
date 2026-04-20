@@ -8,6 +8,7 @@ import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.entity.PlayerPopulation;
 import com.keves.dreamreach.exception.ResourceNotFoundException;
 import com.keves.dreamreach.repository.ConstructionTaskRepository;
+import com.keves.dreamreach.repository.LedgerEntryRepository;
 import com.keves.dreamreach.repository.PlayerAccountRepository;
 import com.keves.dreamreach.repository.TrainingTaskRepository;
 import com.keves.dreamreach.service.AccountCleanupService;
@@ -36,15 +37,18 @@ public class PlayerController {
     private final TavernService tavernService;
     private final AccountCleanupService cleanupService;
     private final TrainingService trainingService;
+    private final LedgerEntryRepository ledgerRepository;
 
     public PlayerController(PlayerAccountRepository accountRepository, GameEconomyConfig economyConfig,
                             EconomyService economyService, ConstructionTaskRepository constructionTaskRepository,
                             TrainingTaskRepository trainingTaskRepository, TavernService tavernService,
-                            AccountCleanupService cleanupService, TrainingService trainingService) {
+                            AccountCleanupService cleanupService, TrainingService trainingService,
+                            LedgerEntryRepository ledgerRepository) {
         this.accountRepository = accountRepository; this.economyConfig = economyConfig;
         this.economyService = economyService; this.constructionTaskRepository = constructionTaskRepository;
         this.trainingTaskRepository = trainingTaskRepository; this.tavernService = tavernService;
         this.cleanupService = cleanupService; this.trainingService = trainingService;
+        this.ledgerRepository = ledgerRepository;
     }
 
     @GetMapping("/me")
@@ -84,6 +88,16 @@ public class PlayerController {
                 BuildingConfigResponse.builder().buildingType("tavern").woodCost(economyConfig.getCostTavernWood()).stoneCost(economyConfig.getCostTavernStone()).buildTimeSeconds(economyConfig.getBuildTimeTavern()).maxWorkers(0).productionRate(0).unlockKeepLevel(economyConfig.getTavernUnlockLevel()).build()
         );
 
+        List<PlayerProfileResponse.LedgerEventResponse> ledgerResponses = ledgerRepository.findByProfileIdOrderByTimestampDesc(profile.getId())
+                .stream()
+                .map(log -> PlayerProfileResponse.LedgerEventResponse.builder()
+                        .id(log.getId().toString())
+                        .timestampEpoch(log.getTimestamp().toEpochMilli())
+                        .category(log.getCategory())
+                        .message(log.getMessage())
+                        .build())
+                .collect(Collectors.toList());
+
         PlayerProfileResponse response = PlayerProfileResponse.builder()
                 .email(account.getEmail()).displayName(account.getProfile().getDisplayName()).pvpEnabled(account.getProfile().isEffectivelyPvpEnabled()).isAdmin(account.isAdmin())
                 .food(profile.getResources() != null ? profile.getResources().getFood() : 0).wood(profile.getResources() != null ? profile.getResources().getWood() : 0).stone(profile.getResources() != null ? profile.getResources().getStone() : 0).gold(profile.getResources() != null ? profile.getResources().getGold() : 0).gems(profile.getResources() != null ? profile.getResources().getGems() : 0)
@@ -96,6 +110,7 @@ public class PlayerController {
                 .keepLevel(keepLevel).maxStorage(maxStorage).houses(houseCount)
                 .buildings(buildingResponses).activeConstructions(activeTasks).activeTrainingTasks(activeTrainingTasks)
                 .trainingConfigs(trainingConfigs).buildingConfigs(buildingConfigs)
+                .ledgerEvents(ledgerResponses)
                 .build();
         return ResponseEntity.ok(response);
     }
