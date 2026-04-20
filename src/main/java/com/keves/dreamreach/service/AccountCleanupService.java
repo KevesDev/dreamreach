@@ -27,6 +27,7 @@ public class AccountCleanupService {
     private final ConstructionTaskRepository constructionRepository;
     private final TrainingTaskRepository trainingRepository;
     private final TavernListingRepository tavernRepository;
+    private final LedgerEntryRepository ledgerEntryRepository;
 
     // Execute at exactly midnight server time every day
     @Scheduled(cron = "0 0 0 * * ?")
@@ -65,6 +66,9 @@ public class AccountCleanupService {
             trainingRepository.deleteAll(trainingRepository.findByProfileIdOrderByStartTimeAsc(profileId));
             constructionRepository.deleteAll(constructionRepository.findByProfileId(profileId));
             characterRepository.deleteAll(characterRepository.findByOwnerId(profileId));
+
+            // Delete kingdom history logs
+            ledgerEntryRepository.deleteByProfileId(profileId);
         }
 
         // 2. Delete the root account.

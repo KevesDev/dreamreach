@@ -148,16 +148,18 @@
     font-size: 0.9rem;
 }
 
-.journal-entry--good { border-left-color: var(--success); }
-.journal-entry--bad { border-left-color: var(--danger); }
-.journal-entry--neutral { border-left-color: var(--accent-blue); }
-
 .journal-time {
-    color: var(--text-muted);
     font-family: monospace;
     font-size: 0.85rem;
-    min-width: 70px;
+    min-width: 140px;
+    font-weight: bold;
 }
+
+/* Subtle, targeted category coloring */
+.journal-time--MILITARY { color: var(--accent-gold); }
+.journal-time--CIVIC { color: var(--text-secondary); }
+.journal-time--CRISIS { color: var(--danger); }
+.journal-time--MILESTONE { color: #a335ee; }
 
 .journal-text {
     color: var(--text-primary);
@@ -169,8 +171,8 @@
     box-sizing: border-box;
     background: var(--bg-panel);
     border-left: 1px solid var(--border-strong);
-    padding: 24px; /* Explicit pixel padding to fix the squished left-edge */
-    padding-right: 32px; /* Room for the scrollbar */
+    padding: 24px;
+    padding-right: 32px;
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
@@ -180,7 +182,6 @@
     z-index: 10;
 }
 
-/* Force all text inside the panel to respect the boundaries */
 .side-panel * {
     box-sizing: border-box;
 }

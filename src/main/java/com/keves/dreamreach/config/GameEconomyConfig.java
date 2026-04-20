@@ -148,4 +148,7 @@ public class GameEconomyConfig {
     // --- DAILY LOGIN REWARD CURVES ---
     private List<Integer> dailyResourceCurve = List.of(10, 20, 35, 55, 80, 110);
     private List<Integer> dailyGoldCurve = List.of(0, 0, 10, 25, 50, 100);
+
+    // --- LEDGER CONFIG ---
+    private int maxLedgerEntries = 50;
 }

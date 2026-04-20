@@ -3,6 +3,7 @@ package com.keves.dreamreach.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keves.dreamreach.config.GameEconomyConfig;
+import com.keves.dreamreach.config.GameLedgerConfig;
 import com.keves.dreamreach.config.GameQuestConfig;
 import com.keves.dreamreach.dto.ActiveMissionResponse;
 import com.keves.dreamreach.entity.*;
@@ -29,6 +30,8 @@ public class MissionService {
     private final CompletedMissionRepository completedRepo;
     private final GameQuestConfig config;
     private final GameEconomyConfig economyConfig;
+    private final GameLedgerConfig ledgerConfig;
+    private final LedgerService ledgerService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Random random = new Random();
 
@@ -36,7 +39,8 @@ public class MissionService {
                           PartyRepository partyRepo, PlayerProfileRepository profileRepo,
                           ActiveMissionRepository activeMissionRepo, AcceptedMissionRepository acceptedRepo,
                           CompletedMissionRepository completedRepo, GameQuestConfig config,
-                          GameEconomyConfig economyConfig) {
+                          GameEconomyConfig economyConfig, GameLedgerConfig ledgerConfig,
+                          LedgerService ledgerService) {
         this.questRepo = questRepo;
         this.charRepo = charRepo;
         this.partyRepo = partyRepo;
@@ -46,6 +50,8 @@ public class MissionService {
         this.completedRepo = completedRepo;
         this.config = config;
         this.economyConfig = economyConfig;
+        this.ledgerConfig = ledgerConfig;
+        this.ledgerService = ledgerService;
     }
 
     @Transactional
@@ -200,10 +206,16 @@ public class MissionService {
         activeMission.setQuestTemplate(quest);
         activeMission.setSuccessChance(calculateSuccessChance(characterIds, questId));
         activeMission.setDispatchTime(Instant.now());
-        activeMission.setEndTime(Instant.now().plus(quest.getDurationHours() != null ? quest.getDurationHours() : 4, ChronoUnit.HOURS));
+        activeMission.setEndTime(Instant.now().plus(quest.getDurationHours() != null ? quest.getDurationHours() : 2, ChronoUnit.HOURS));
 
         activeMissionRepo.save(activeMission);
         acceptedRepo.delete(accepted);
+
+        // Record the event in the Ledger using dynamic config
+        String message = ledgerConfig.getMissionDispatchMessage()
+                .replace("{count}", String.valueOf(characterIds.size()))
+                .replace("{questTitle}", quest.getTitle());
+        ledgerService.appendLog(profile, "MILITARY", message);
     }
 
     @Transactional
@@ -230,7 +242,6 @@ public class MissionService {
                     .endTimeEpoch(mission.getEndTime().toEpochMilli())
                     .isResolved(mission.isResolved())
                     .wasSuccessful(mission.isWasSuccessful())
-                    // Map rewards directly into the response so UI can show them without lookup
                     .rewardGold(qt.getRewardGold() != null ? qt.getRewardGold() : 0)
                     .rewardGems(qt.getRewardGems() != null ? qt.getRewardGems() : 0)
                     .rewardFood(qt.getRewardFood() != null ? qt.getRewardFood() : 0)
@@ -248,6 +259,7 @@ public class MissionService {
         Instant now = Instant.now();
 
         for (ActiveMission mission : missions) {
+            // Only process missions whose timers have expired but aren't flagged as resolved yet
             if (now.isBefore(mission.getEndTime()) || mission.isResolved()) continue;
 
             boolean success = (random.nextInt(100) + 1) <= mission.getSuccessChance();
@@ -314,6 +326,12 @@ public class MissionService {
             cm.setProfile(profile);
             cm.setQuestTemplate(quest);
             completedRepo.save(cm);
+
+            // Record victory in the Ledger using dynamic config
+            String message = ledgerConfig.getMissionSuccessMessage()
+                    .replace("{questTitle}", quest.getTitle());
+            ledgerService.appendLog(profile, "MILITARY", message);
+
         } else {
             for (PlayerCharacter pc : characters) {
                 pc.setCurrentHp(Math.max(1, pc.getCurrentHp() - Math.max(1, (int) (pc.getMaxHp() * 0.90))));
@@ -324,6 +342,11 @@ public class MissionService {
             am.setProfile(profile);
             am.setQuestTemplate(quest);
             acceptedRepo.save(am);
+
+            // Record defeat in the Ledger using dynamic config
+            String message = ledgerConfig.getMissionFailureMessage()
+                    .replace("{questTitle}", quest.getTitle());
+            ledgerService.appendLog(profile, "CRISIS", message);
         }
 
         charRepo.saveAll(characters);
