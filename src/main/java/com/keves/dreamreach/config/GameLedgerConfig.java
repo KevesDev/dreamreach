@@ -21,4 +21,7 @@ public class GameLedgerConfig {
     private String economyUtopiaMessage = "Citizens rejoice in the prosperity and freedom of your reign.";
     private String taxChangeMessage = "A new tax decree has been issued: {bracket}.";
 
+    private String trainingCompleteMessage = "{count} peasant(s) have finished their training as {profession}.";
+    private String constructionCompleteMessage = "Construction of a new {buildingType} has been completed.";
+
 }
