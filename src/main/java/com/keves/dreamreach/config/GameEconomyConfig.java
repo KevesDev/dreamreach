@@ -48,7 +48,25 @@ public class GameEconomyConfig {
     private double popChangePercentMax = 0.05;
     private double happinessImpactMultiplier = 0.01;
 
-    // --- TAXES & HAPPINESS ---
+    // --- DYNAMIC HAPPINESS TARGETS & INTERPOLATION ---
+    private int targetHappinessBase = 50;
+    private double happinessInterpolationRatePerHour = 25.0; // How fast happiness moves toward the target
+
+    // Modifiers applied to calculate the Target Happiness
+    private int targetModLowTax = 20;
+    private int targetModNormalTax = 0;
+    private int targetModHighTax = -30;
+
+    private int targetModHasFood = 10;
+    private int targetModNoFood = -40;
+
+    private int targetModAvailableHousing = 10;
+    private int targetModFullHousing = -10;
+
+    private int targetModAvailableJobs = 15;
+    private int targetModNoJobs = -10;
+
+    // --- TAXES & HAPPINESS (LEGACY CONSTANTS RETAINED FOR SAFE MIGRATION) ---
     private double taxRateLowMultiplier = 0.5;
     private double taxRateNormalMultiplier = 1.0;
     private double taxRateHighMultiplier = 1.5;
@@ -86,8 +104,8 @@ public class GameEconomyConfig {
     private int costTowerStone = 100;
 
     // The base construction cost for the Tavern
-    private int costTavernWood = 10;
-    private int costTavernStone = 10;
+    private int costTavernWood = 50;
+    private int costTavernStone = 200;
 
     // --- CONSTRUCTION BASE TIMERS (in seconds) ---
     private int buildTimeHouse = 60;     // 1 min
@@ -148,7 +166,4 @@ public class GameEconomyConfig {
     // --- DAILY LOGIN REWARD CURVES ---
     private List<Integer> dailyResourceCurve = List.of(10, 20, 35, 55, 80, 110);
     private List<Integer> dailyGoldCurve = List.of(0, 0, 10, 25, 50, 100);
-
-    // --- LEDGER CONFIG ---
-    private int maxLedgerEntries = 50;
 }

@@ -11,8 +11,14 @@ import org.springframework.stereotype.Component;
 @Setter
 public class GameLedgerConfig {
 
+    private int maxLedgerEntries = 50;
+
     private String missionDispatchMessage = "A party of {count} heroes has been dispatched to {questTitle}.";
     private String missionSuccessMessage = "A party has returned from {questTitle}, triumphant!";
     private String missionFailureMessage = "A party has fled from {questTitle}, returning in defeat.";
+
+    private String economyStarvationMessage = "The lack of food is causing deep unrest among the populace.";
+    private String economyUtopiaMessage = "Citizens rejoice in the prosperity and freedom of your reign.";
+    private String taxChangeMessage = "A new tax decree has been issued: {bracket}.";
 
 }

@@ -1,6 +1,6 @@
 package com.keves.dreamreach.service;
 
-import com.keves.dreamreach.config.GameEconomyConfig;
+import com.keves.dreamreach.config.GameLedgerConfig;
 import com.keves.dreamreach.entity.LedgerEntry;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.repository.LedgerEntryRepository;
@@ -14,11 +14,11 @@ import java.util.List;
 public class LedgerService {
 
     private final LedgerEntryRepository ledgerRepository;
-    private final GameEconomyConfig economyConfig;
+    private final GameLedgerConfig ledgerConfig;
 
-    public LedgerService(LedgerEntryRepository ledgerRepository, GameEconomyConfig economyConfig) {
+    public LedgerService(LedgerEntryRepository ledgerRepository, GameLedgerConfig ledgerConfig) {
         this.ledgerRepository = ledgerRepository;
-        this.economyConfig = economyConfig;
+        this.ledgerConfig = ledgerConfig;
     }
 
     /**
@@ -35,8 +35,8 @@ public class LedgerService {
         ledgerRepository.save(entry);
 
         List<LedgerEntry> allLogs = ledgerRepository.findByProfileIdOrderByTimestampDesc(profile.getId());
-        if (allLogs.size() > economyConfig.getMaxLedgerEntries()) {
-            List<LedgerEntry> logsToDelete = allLogs.subList(economyConfig.getMaxLedgerEntries(), allLogs.size());
+        if (allLogs.size() > ledgerConfig.getMaxLedgerEntries()) {
+            List<LedgerEntry> logsToDelete = allLogs.subList(ledgerConfig.getMaxLedgerEntries(), allLogs.size());
             ledgerRepository.deleteAll(logsToDelete);
         }
     }
