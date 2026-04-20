@@ -1,6 +1,7 @@
 package com.keves.dreamreach.service;
 
 import com.keves.dreamreach.config.GameEconomyConfig;
+import com.keves.dreamreach.config.GameLedgerConfig;
 import com.keves.dreamreach.entity.BuildingInstance;
 import com.keves.dreamreach.entity.PlayerPopulation;
 import com.keves.dreamreach.entity.PlayerProfile;
@@ -25,13 +26,19 @@ public class EconomyService {
     private final GameEconomyConfig economyConfig;
     private final PlayerProfileRepository profileRepository;
     private final BuildingInstanceRepository buildingRepository;
+    private final LedgerService ledgerService;
+    private final GameLedgerConfig ledgerConfig;
 
     public EconomyService(GameEconomyConfig economyConfig,
                           PlayerProfileRepository profileRepository,
-                          BuildingInstanceRepository buildingRepository) {
+                          BuildingInstanceRepository buildingRepository,
+                          LedgerService ledgerService,
+                          GameLedgerConfig ledgerConfig) {
         this.economyConfig = economyConfig;
         this.profileRepository = profileRepository;
         this.buildingRepository = buildingRepository;
+        this.ledgerService = ledgerService;
+        this.ledgerConfig = ledgerConfig;
     }
 
     /**
@@ -118,6 +125,65 @@ public class EconomyService {
     }
 
     /**
+     * Core dynamic evaluator for the kingdom's target happiness score.
+     */
+    private int calculateTargetHappiness(PlayerProfile profile) {
+        int target = economyConfig.getTargetHappinessBase();
+        PlayerResources res = profile.getResources();
+        PlayerPopulation pop = profile.getPopulation();
+
+        // 1. Tax Policy Evaluation
+        switch (profile.getTaxBracket().toUpperCase()) {
+            case "LOW" -> target += economyConfig.getTargetModLowTax();
+            case "HIGH" -> target += economyConfig.getTargetModHighTax();
+            default -> target += economyConfig.getTargetModNormalTax();
+        }
+
+        // 2. Food Scarcity Evaluation
+        if (res.getFood() > 0) {
+            target += economyConfig.getTargetModHasFood();
+        } else {
+            target += economyConfig.getTargetModNoFood();
+        }
+
+        // 3. Housing Density Evaluation
+        int houseCount = (int) profile.getBuildings().stream().filter(b -> b.getBuildingType().equalsIgnoreCase("house")).count();
+        int maxPop = houseCount * economyConfig.getCapacityPerHouse();
+
+        if (pop.getTotalPopulation() < maxPop) {
+            target += economyConfig.getTargetModAvailableHousing();
+        } else {
+            target += economyConfig.getTargetModFullHousing();
+        }
+
+        // 4. Labor Market Evaluation
+        boolean hasAvailableJobs = false;
+        boolean hasBuildingsWithJobs = false;
+        for (BuildingInstance b : profile.getBuildings()) {
+            String type = b.getBuildingType().toLowerCase();
+            if (type.equals("bakery") || type.equals("lodge")) {
+                hasBuildingsWithJobs = true;
+                int maxCap = type.equals("bakery") ? economyConfig.getMaxWorkersBakery() : economyConfig.getMaxWorkersLodge();
+                if (b.getAssignedWorkers() < maxCap) {
+                    hasAvailableJobs = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasBuildingsWithJobs) {
+            if (hasAvailableJobs) {
+                target += economyConfig.getTargetModAvailableJobs();
+            } else {
+                target += economyConfig.getTargetModNoJobs();
+            }
+        }
+
+        // Clamp the theoretical target
+        return Math.max(0, Math.min(economyConfig.getMaxHappiness(), target));
+    }
+
+    /**
      * STATE-BASED ACCRUAL LOGIC:
      * This method 'flushes' all resources earned at the OLD rate into the 'Pending' pool.
      */
@@ -143,20 +209,31 @@ public class EconomyService {
         };
         int goldRate = (int) (pop.getTotalPopulation() * economyConfig.getTaxGoldPerCitizenPerHour() * taxMultiplier);
 
-        // Apply happiness modifier based on active tax bracket
-        int happinessMod = switch (profile.getTaxBracket().toUpperCase()) {
-            case "LOW" -> economyConfig.getHappinessModifierLowTax();
-            case "HIGH" -> economyConfig.getHappinessModifierHighTax();
-            default -> economyConfig.getHappinessModifierNormalTax();
-        };
+        // --- DYNAMIC HAPPINESS LERP CALCULATION ---
+        int currentHappiness = profile.getHappiness();
+        int targetHappiness = calculateTargetHappiness(profile);
+        double maxMovement = hoursElapsed * economyConfig.getHappinessInterpolationRatePerHour();
 
-        // Calculate accrued happiness over the timeframe elapsed
-        int totalHappinessChange = (int) (happinessMod * hoursElapsed);
-        int newHappiness = profile.getHappiness() + totalHappinessChange;
+        int newHappiness = currentHappiness;
+
+        if (currentHappiness < targetHappiness) {
+            newHappiness = (int) Math.min(targetHappiness, currentHappiness + maxMovement);
+        } else if (currentHappiness > targetHappiness) {
+            newHappiness = (int) Math.max(targetHappiness, currentHappiness - maxMovement);
+        }
 
         // Clamp happiness firmly between 0 and the established maximum cap
         if (newHappiness > economyConfig.getMaxHappiness()) newHappiness = economyConfig.getMaxHappiness();
         if (newHappiness < 0) newHappiness = 0;
+
+        // Ledger Event Triggers based on severe structural thresholds
+        if (res.getFood() <= 0 && newHappiness < 40 && currentHappiness >= 40) {
+            ledgerService.appendLog(profile, "CRISIS", ledgerConfig.getEconomyStarvationMessage());
+        }
+        if (newHappiness >= 80 && currentHappiness < 80) {
+            ledgerService.appendLog(profile, "CIVIC", ledgerConfig.getEconomyUtopiaMessage());
+        }
+
         profile.setHappiness(newHappiness);
 
         double newPendingFood = res.getPendingFood() + (foodRate * hoursElapsed);
@@ -187,7 +264,8 @@ public class EconomyService {
         int ticksPassed = (int) (minutesSincePopTick / economyConfig.getPopTickIntervalMinutes());
 
         if (ticksPassed > 0) {
-            int currentHappiness = profile.getHappiness();
+            // Use the freshly calculated happiness for the migration modifiers
+            int tickHappiness = profile.getHappiness();
 
             int houseCount = (int) profile.getBuildings().stream()
                     .filter(b -> b.getBuildingType().equalsIgnoreCase("house")).count();
@@ -198,11 +276,11 @@ public class EconomyService {
                 int currentPop = pop.getTotalPopulation();
 
                 // Happiness scales the likelihood of joining vs leaving
-                double joinWeightMod = (currentHappiness - 50) * economyConfig.getHappinessImpactMultiplier();
+                double joinWeightMod = (tickHappiness - 50) * economyConfig.getHappinessImpactMultiplier();
                 double effectiveJoinWeight = Math.max(0.0, Math.min(1.0, economyConfig.getBaseJoinWeight() + joinWeightMod));
 
                 // Extreme happiness (very high or very low) increases overall activity
-                double movementMod = Math.abs(currentHappiness - 50) * (economyConfig.getHappinessImpactMultiplier() / 2.0);
+                double movementMod = Math.abs(tickHappiness - 50) * (economyConfig.getHappinessImpactMultiplier() / 2.0);
                 double effectiveMovementChance = Math.max(0.0, Math.min(1.0, economyConfig.getBaseMovementChance() + movementMod));
 
                 if (Math.random() < effectiveMovementChance) {
@@ -340,6 +418,11 @@ public class EconomyService {
         }
         profile.setTaxBracket(upper);
         profileRepository.save(profile);
+
+        // Ledger Event for Tax Change using dynamic config
+        String message = ledgerConfig.getTaxChangeMessage()
+                .replace("{bracket}", upper);
+        ledgerService.appendLog(profile, "CIVIC", message);
     }
 
     /**
