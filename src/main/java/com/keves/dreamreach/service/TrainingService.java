@@ -1,6 +1,7 @@
 package com.keves.dreamreach.service;
 
 import com.keves.dreamreach.config.GameEconomyConfig;
+import com.keves.dreamreach.config.GameLedgerConfig;
 import com.keves.dreamreach.entity.PlayerPopulation;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.entity.PlayerResources;
@@ -11,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class TrainingService {
@@ -20,15 +23,21 @@ public class TrainingService {
     private final PlayerProfileRepository profileRepository;
     private final EconomyService economyService;
     private final GameEconomyConfig config;
+    private final LedgerService ledgerService;
+    private final GameLedgerConfig ledgerConfig;
 
     public TrainingService(TrainingTaskRepository taskRepository,
                            PlayerProfileRepository profileRepository,
                            EconomyService economyService,
-                           GameEconomyConfig config) {
+                           GameEconomyConfig config,
+                           LedgerService ledgerService,
+                           GameLedgerConfig ledgerConfig) {
         this.taskRepository = taskRepository;
         this.profileRepository = profileRepository;
         this.economyService = economyService;
         this.config = config;
+        this.ledgerService = ledgerService;
+        this.ledgerConfig = ledgerConfig;
     }
 
     @Transactional
@@ -107,6 +116,8 @@ public class TrainingService {
         boolean changed = false;
 
         int activeCount = 0;
+        Map<String, Integer> completedCounts = new HashMap<>();
+
         for (TrainingTask task : tasks) {
             if (now.isBefore(task.getCompletionTime())) {
                 activeCount++;
@@ -118,6 +129,10 @@ public class TrainingService {
                 case "hunter" -> pop.setHunters(pop.getHunters() + 1);
                 case "baker" -> pop.setBakers(pop.getBakers() + 1);
             }
+
+            // Map the completed task by profession so we can aggregate the ledger message
+            completedCounts.put(task.getProfessionType().toLowerCase(), completedCounts.getOrDefault(task.getProfessionType().toLowerCase(), 0) + 1);
+
             taskRepository.delete(task);
             changed = true;
         }
@@ -128,6 +143,14 @@ public class TrainingService {
             pop.setInTraining(activeCount);
             pop.setIdlePeasants(Math.max(0, pop.getIdlePeasants() + stranded));
             changed = true;
+        }
+
+        // Write a single, aggregated log entry per profession type finished
+        for (Map.Entry<String, Integer> entry : completedCounts.entrySet()) {
+            String msg = ledgerConfig.getTrainingCompleteMessage()
+                    .replace("{count}", String.valueOf(entry.getValue()))
+                    .replace("{profession}", entry.getKey());
+            ledgerService.appendLog(profile, "CIVIC", msg);
         }
 
         if (changed) {

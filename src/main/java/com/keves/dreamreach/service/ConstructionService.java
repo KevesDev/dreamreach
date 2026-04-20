@@ -1,6 +1,7 @@
 package com.keves.dreamreach.service;
 
 import com.keves.dreamreach.config.GameEconomyConfig;
+import com.keves.dreamreach.config.GameLedgerConfig;
 import com.keves.dreamreach.entity.BuildingInstance;
 import com.keves.dreamreach.entity.ConstructionTask;
 import com.keves.dreamreach.entity.PlayerProfile;
@@ -20,15 +21,21 @@ public class ConstructionService {
     private final PlayerProfileRepository profileRepository;
     private final EconomyService economyService;
     private final GameEconomyConfig config;
+    private final LedgerService ledgerService;
+    private final GameLedgerConfig ledgerConfig;
 
     public ConstructionService(ConstructionTaskRepository taskRepository,
                                PlayerProfileRepository profileRepository,
                                EconomyService economyService,
-                               GameEconomyConfig config) {
+                               GameEconomyConfig config,
+                               LedgerService ledgerService,
+                               GameLedgerConfig ledgerConfig) {
         this.taskRepository = taskRepository;
         this.profileRepository = profileRepository;
         this.economyService = economyService;
         this.config = config;
+        this.ledgerService = ledgerService;
+        this.ledgerConfig = ledgerConfig;
     }
 
     @Transactional
@@ -120,5 +127,10 @@ public class ConstructionService {
 
         taskRepository.delete(task);
         profileRepository.save(profile);
+
+        // Record the event in the Ledger using dynamic config
+        String msg = ledgerConfig.getConstructionCompleteMessage()
+                .replace("{buildingType}", buildingType.toLowerCase());
+        ledgerService.appendLog(profile, "CIVIC", msg);
     }
 }
