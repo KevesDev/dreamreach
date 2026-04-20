@@ -66,14 +66,10 @@ public class GameEconomyConfig {
     private int targetModAvailableJobs = 15;
     private int targetModNoJobs = -10;
 
-    // --- TAXES & HAPPINESS (LEGACY CONSTANTS RETAINED FOR SAFE MIGRATION) ---
+    // --- TAXES (GOLD MULTIPLIERS) ---
     private double taxRateLowMultiplier = 0.5;
     private double taxRateNormalMultiplier = 1.0;
     private double taxRateHighMultiplier = 1.5;
-
-    private int happinessModifierLowTax = 2;
-    private int happinessModifierNormalTax = 0;
-    private int happinessModifierHighTax = -5;
 
     private int taxGoldPerCitizenPerHour = 2;
     private int taxCooldownMinutes = 60;
@@ -104,8 +100,8 @@ public class GameEconomyConfig {
     private int costTowerStone = 100;
 
     // The base construction cost for the Tavern
-    private int costTavernWood = 50;
-    private int costTavernStone = 200;
+    private int costTavernWood = 10;
+    private int costTavernStone = 10;
 
     // --- CONSTRUCTION BASE TIMERS (in seconds) ---
     private int buildTimeHouse = 60;     // 1 min

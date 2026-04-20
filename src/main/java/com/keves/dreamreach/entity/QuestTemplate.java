@@ -14,6 +14,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 public class QuestTemplate {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
@@ -23,10 +24,10 @@ public class QuestTemplate {
     @Column(name = "type", nullable = false)
     private QuestType type;
 
-    @Column(name = "title", nullable = false, length = 100)
+    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "TEXT", nullable = false)
     private String description;
 
     @Column(name = "target_stats_json", columnDefinition = "TEXT")
@@ -38,14 +39,35 @@ public class QuestTemplate {
     @Column(name = "disadvantage_classes_json", columnDefinition = "TEXT")
     private String disadvantageClassesJson;
 
-    @Column(name = "base_exp") private Integer baseExp = 0;
-    @Column(name = "reward_gold") private Integer rewardGold = 0;
-    @Column(name = "reward_gems") private Integer rewardGems = 0;
-    @Column(name = "reward_food") private Integer rewardFood = 0;
-    @Column(name = "reward_wood") private Integer rewardWood = 0;
-    @Column(name = "reward_stone") private Integer rewardStone = 0;
+    @Column(name = "base_exp")
+    private Integer baseExp = 0;
 
-    @Column(name = "duration_hours") private Integer durationHours = 2;
+    @Column(name = "reward_gold")
+    private Integer rewardGold = 0;
 
-    @Column(name = "is_published") private boolean published = true;
+    @Column(name = "reward_gems")
+    private Integer rewardGems = 0;
+
+    @Column(name = "reward_food")
+    private Integer rewardFood = 0;
+
+    @Column(name = "reward_wood")
+    private Integer rewardWood = 0;
+
+    @Column(name = "reward_stone")
+    private Integer rewardStone = 0;
+
+    @Column(name = "duration_hours")
+    private Integer durationHours = 4;
+
+    @Column(name = "published", nullable = false)
+    private boolean published = false;
+
+    // --- PROGRESSION GATING ---
+
+    @Column(name = "min_keep_level", nullable = false)
+    private Integer minKeepLevel = 1;
+
+    @Column(name = "prerequisite_quest_id")
+    private UUID prerequisiteQuestId;
 }

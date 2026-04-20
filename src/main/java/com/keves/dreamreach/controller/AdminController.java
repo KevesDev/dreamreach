@@ -110,6 +110,8 @@ public class AdminController {
         existing.setRewardStone(questDetails.getRewardStone());
         existing.setDurationHours(questDetails.getDurationHours());
         existing.setPublished(questDetails.isPublished());
+        existing.setMinKeepLevel(questDetails.getMinKeepLevel());
+        existing.setPrerequisiteQuestId(questDetails.getPrerequisiteQuestId());
 
         return ResponseEntity.ok(questTemplateRepository.save(existing));
     }
@@ -176,8 +178,6 @@ public class AdminController {
         existing.setPortraitUrl(dto.getTemplate().getPortraitUrl());
         existing.setBaseGoldCost(dto.getTemplate().getBaseGoldCost());
         existing.setBaseGemCost(dto.getTemplate().getBaseGemCost());
-
-        // FIX: Ensure the priority mapping layout is explicitly saved to the database on updates
         existing.setStatPriorityJson(dto.getTemplate().getStatPriorityJson());
 
         CharacterTemplate savedTemplate = characterTemplateRepository.save(existing);

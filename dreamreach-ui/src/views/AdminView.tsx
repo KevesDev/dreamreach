@@ -20,6 +20,9 @@ export interface AdminQuest {
     rewardStone: number;
     durationHours: number;
     published: boolean;
+    // NEW FIELDS
+    minKeepLevel: number;
+    prerequisiteQuestId: string | null;
 }
 
 export interface AdminHero {
@@ -42,14 +45,15 @@ export interface AdminHero {
         portraitUrl: string;
         baseGoldCost: number;
         baseGemCost: number;
-        statPriorityJson: string; // Added for the priority mapping system
+        statPriorityJson: string;
     };
     tavernWeight: number;
 }
 
 const emptyQuest: AdminQuest = {
     type: 'SCOUTING', title: '', description: '', targetStatsJson: '{}', advantageClassesJson: '[]', disadvantageClassesJson: '[]',
-    baseExp: 0, rewardGold: 0, rewardGems: 0, rewardFood: 0, rewardWood: 0, rewardStone: 0, durationHours: 4, published: true
+    baseExp: 0, rewardGold: 0, rewardGems: 0, rewardFood: 0, rewardWood: 0, rewardStone: 0, durationHours: 4, published: true,
+    minKeepLevel: 1, prerequisiteQuestId: null
 };
 
 const emptyHero: AdminHero = {
@@ -61,7 +65,6 @@ const emptyHero: AdminHero = {
     tavernWeight: 10
 };
 
-// ARTIFICER added to the front-end list here
 const DND_CLASSES = ['FIGHTER', 'WIZARD', 'CLERIC', 'ROGUE', 'RANGER', 'PALADIN', 'BARD', 'WARLOCK', 'SORCERER', 'DRUID', 'BARBARIAN', 'MONK', 'ARTIFICER'];
 const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY'];
 const STAT_OPTIONS = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
@@ -205,7 +208,7 @@ export default function AdminView() {
                             <div key={quest.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
                                 <div>
                                     <div style={{ fontWeight: 'bold', color: 'var(--accent-gold)' }}>{quest.title} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '8px' }}>{quest.type}</span></div>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>{quest.durationHours} Hours | {quest.baseExp} EXP</div>
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Keep Lv. {quest.minKeepLevel} | {quest.durationHours} Hours | {quest.baseExp} EXP</div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                     <button onClick={() => handleTogglePublish(quest)} style={{ padding: '6px 12px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid', cursor: 'pointer', background: 'transparent', borderColor: quest.published ? 'var(--success)' : 'var(--text-muted)', color: quest.published ? 'var(--success)' : 'var(--text-muted)' }}>{quest.published ? '🟢 Published' : '⚫ Hidden'}</button>
@@ -226,6 +229,21 @@ export default function AdminView() {
                             <div><label className="input-label">Quest Title</label><input type="text" className="input" value={editingQuest.title} onChange={e => setEditingQuest({...editingQuest, title: e.target.value})} /></div>
                             <div><label className="input-label">Quest Type</label><select className="input" value={editingQuest.type} onChange={e => setEditingQuest({...editingQuest, type: e.target.value})}><option value="SCOUTING">SCOUTING</option><option value="HUNT">HUNT</option><option value="RAIDING">RAIDING</option><option value="STORY">STORY</option><option value="ESCORT">ESCORT</option></select></div>
                             <div><label className="input-label">Description</label><textarea className="input" rows={4} value={editingQuest.description} onChange={e => setEditingQuest({...editingQuest, description: e.target.value})}></textarea></div>
+
+                            {/* --- NEW GATING FIELDS --- */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: 'var(--surface-2)', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                                <div><label className="input-label" style={{color: 'var(--accent-gold)'}}>Min. Keep Level</label><input type="number" className="input" value={editingQuest.minKeepLevel} onChange={e => setEditingQuest({...editingQuest, minKeepLevel: parseInt(e.target.value) || 1})} /></div>
+                                <div>
+                                    <label className="input-label" style={{color: 'var(--accent-gold)'}}>Prerequisite Quest</label>
+                                    <select className="input" value={editingQuest.prerequisiteQuestId || ''} onChange={e => setEditingQuest({...editingQuest, prerequisiteQuestId: e.target.value || null})}>
+                                        <option value="">None (Always Available)</option>
+                                        {quests.filter(q => q.id !== editingQuest.id).map(q => (
+                                            <option key={q.id} value={q.id}>{q.title}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <div><label className="input-label">Base EXP</label><input type="number" className="input" value={editingQuest.baseExp} onChange={e => setEditingQuest({...editingQuest, baseExp: parseInt(e.target.value) || 0})} /></div>
                                 <div><label className="input-label">Duration (Hours)</label><input type="number" className="input" value={editingQuest.durationHours} onChange={e => setEditingQuest({...editingQuest, durationHours: parseInt(e.target.value) || 0})} /></div>
