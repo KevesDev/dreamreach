@@ -60,7 +60,8 @@ public class QuestTemplate {
     @Column(name = "duration_hours")
     private Integer durationHours = 4;
 
-    @Column(name = "published", nullable = false)
+    // Mapped strictly to the actual database column "is_published" created in V20
+    @Column(name = "is_published", nullable = false)
     private boolean published = false;
 
     // --- PROGRESSION GATING ---
