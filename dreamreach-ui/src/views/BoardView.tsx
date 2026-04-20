@@ -38,7 +38,7 @@ export default function BoardView() {
                 {boardQuests.length === 0 ? (
                     <div style={{color: 'var(--text-muted)'}}>No new missions available at this time. Check back later.</div>
                 ) : boardQuests.map(q => (
-                    <div key={q.id} className="board-card">
+                    <div key={q.id} className={`board-card quest-type-${q.type.toLowerCase()}`}>
                         <div className="board-card-header">
                             <h3>{q.title}</h3>
                             <span className="board-card-type">{q.type}</span>
