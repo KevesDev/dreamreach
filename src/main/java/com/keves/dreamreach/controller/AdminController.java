@@ -177,6 +177,9 @@ public class AdminController {
         existing.setBaseGoldCost(dto.getTemplate().getBaseGoldCost());
         existing.setBaseGemCost(dto.getTemplate().getBaseGemCost());
 
+        // FIX: Ensure the priority mapping layout is explicitly saved to the database on updates
+        existing.setStatPriorityJson(dto.getTemplate().getStatPriorityJson());
+
         CharacterTemplate savedTemplate = characterTemplateRepository.save(existing);
 
         Optional<RecruitmentPool> existingPool = recruitmentPoolRepository.findByCharacterTemplateId(id);
