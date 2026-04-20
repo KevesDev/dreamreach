@@ -30,7 +30,33 @@
     display: flex;
     flex-direction: column;
     transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
 }
+
+.board-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background-size: 200% 200%;
+    animation: ribbonShift 3s ease infinite;
+    opacity: 0.8;
+}
+
+@keyframes ribbonShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.quest-type-story::before { background-image: linear-gradient(90deg, #8a2be2, #4b0082, #8a2be2); }
+.quest-type-hunt::before { background-image: linear-gradient(90deg, #dc3545, #8b0000, #dc3545); }
+.quest-type-scouting::before { background-image: linear-gradient(90deg, #28a745, #006400, #28a745); }
+.quest-type-raiding::before { background-image: linear-gradient(90deg, #fd7e14, #d2691e, #fd7e14); }
+.quest-type-escort::before { background-image: linear-gradient(90deg, #007bff, #00008b, #007bff); }
 
 .board-card:hover {
     border-color: var(--accent-gold);

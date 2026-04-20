@@ -59,13 +59,28 @@ public class MissionService {
         PlayerProfile profile = profileRepo.findByDisplayName(displayName)
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found."));
 
+        // Calculate player's current Keep Level
+        int currentKeepLevel = profile.getBuildings().stream()
+                .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
+                .mapToInt(BuildingInstance::getLevel)
+                .max().orElse(1);
+
         Set<UUID> excludedIds = new HashSet<>();
         activeMissionRepo.findByPartyOwnerId(profile.getId()).forEach(m -> excludedIds.add(m.getQuestTemplate().getId()));
         acceptedRepo.findByProfileId(profile.getId()).forEach(a -> excludedIds.add(a.getQuestTemplate().getId()));
-        completedRepo.findByProfileId(profile.getId()).forEach(c -> excludedIds.add(c.getQuestTemplate().getId()));
+
+        // Track specifically what the user has completed for prerequisite validation
+        Set<UUID> completedIds = new HashSet<>();
+        completedRepo.findByProfileId(profile.getId()).forEach(c -> {
+            excludedIds.add(c.getQuestTemplate().getId());
+            completedIds.add(c.getQuestTemplate().getId());
+        });
 
         return questRepo.findAll().stream()
-                .filter(q -> q.isPublished() && !excludedIds.contains(q.getId()))
+                .filter(QuestTemplate::isPublished)
+                .filter(q -> !excludedIds.contains(q.getId()))
+                .filter(q -> q.getMinKeepLevel() <= currentKeepLevel) // Level Gating
+                .filter(q -> q.getPrerequisiteQuestId() == null || completedIds.contains(q.getPrerequisiteQuestId())) // Prerequisite Gating
                 .collect(Collectors.toList());
     }
 
