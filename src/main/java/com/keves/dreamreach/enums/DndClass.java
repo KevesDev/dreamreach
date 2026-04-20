@@ -1,6 +1,7 @@
 package com.keves.dreamreach.enums;
 
 public enum DndClass {
+    ARTIFICER,
     BARBARIAN,
     BARD,
     CLERIC,
