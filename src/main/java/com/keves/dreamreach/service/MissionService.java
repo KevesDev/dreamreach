@@ -2,6 +2,7 @@ package com.keves.dreamreach.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.keves.dreamreach.config.GameEconomyConfig;
 import com.keves.dreamreach.config.GameQuestConfig;
 import com.keves.dreamreach.dto.ActiveMissionResponse;
 import com.keves.dreamreach.entity.*;
@@ -27,13 +28,15 @@ public class MissionService {
     private final AcceptedMissionRepository acceptedRepo;
     private final CompletedMissionRepository completedRepo;
     private final GameQuestConfig config;
+    private final GameEconomyConfig economyConfig;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Random random = new Random();
 
     public MissionService(QuestTemplateRepository questRepo, PlayerCharacterRepository charRepo,
                           PartyRepository partyRepo, PlayerProfileRepository profileRepo,
                           ActiveMissionRepository activeMissionRepo, AcceptedMissionRepository acceptedRepo,
-                          CompletedMissionRepository completedRepo, GameQuestConfig config) {
+                          CompletedMissionRepository completedRepo, GameQuestConfig config,
+                          GameEconomyConfig economyConfig) {
         this.questRepo = questRepo;
         this.charRepo = charRepo;
         this.partyRepo = partyRepo;
@@ -42,6 +45,7 @@ public class MissionService {
         this.acceptedRepo = acceptedRepo;
         this.completedRepo = completedRepo;
         this.config = config;
+        this.economyConfig = economyConfig;
     }
 
     @Transactional
@@ -272,11 +276,30 @@ public class MissionService {
 
         if (mission.isWasSuccessful()) {
             PlayerResources resources = profile.getResources();
+
+            // Calculate current max storage limit based on Keep Level
+            int keepLevel = profile.getBuildings().stream()
+                    .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
+                    .mapToInt(BuildingInstance::getLevel)
+                    .max().orElse(1);
+            int maxStorage = keepLevel * economyConfig.getBaseStoragePerKeepLevel();
+
+            int foodReward = quest.getRewardFood() != null ? quest.getRewardFood() : 0;
+            int woodReward = quest.getRewardWood() != null ? quest.getRewardWood() : 0;
+            int stoneReward = quest.getRewardStone() != null ? quest.getRewardStone() : 0;
+
+            // Enforce storage caps specifically for hard-capped resources
+            int actualFoodToAdd = foodReward > 0 ? Math.min(foodReward, Math.max(0, maxStorage - resources.getFood())) : 0;
+            int actualWoodToAdd = woodReward > 0 ? Math.min(woodReward, Math.max(0, maxStorage - resources.getWood())) : 0;
+            int actualStoneToAdd = stoneReward > 0 ? Math.min(stoneReward, Math.max(0, maxStorage - resources.getStone())) : 0;
+
+            // Gold and Gems have no ceiling constraint
             resources.setGold(resources.getGold() + (quest.getRewardGold() != null ? quest.getRewardGold() : 0));
             resources.setGems(resources.getGems() + (quest.getRewardGems() != null ? quest.getRewardGems() : 0));
-            resources.setFood(resources.getFood() + (quest.getRewardFood() != null ? quest.getRewardFood() : 0));
-            resources.setWood(resources.getWood() + (quest.getRewardWood() != null ? quest.getRewardWood() : 0));
-            resources.setStone(resources.getStone() + (quest.getRewardStone() != null ? quest.getRewardStone() : 0));
+
+            resources.setFood(resources.getFood() + actualFoodToAdd);
+            resources.setWood(resources.getWood() + actualWoodToAdd);
+            resources.setStone(resources.getStone() + actualStoneToAdd);
 
             int xpShare = (quest.getBaseExp() != null && !characters.isEmpty()) ? (quest.getBaseExp() / characters.size()) : 0;
 
