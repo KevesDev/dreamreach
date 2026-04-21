@@ -14,4 +14,9 @@ public class BuildingInstanceResponse {
     private String buildingType;
     private int level;
     private int assignedWorkers;
+
+    // Server-Authoritative Math sent to the UI
+    private int nextLevelWoodCost;
+    private int nextLevelStoneCost;
+    private int nextLevelTimeSeconds;
 }

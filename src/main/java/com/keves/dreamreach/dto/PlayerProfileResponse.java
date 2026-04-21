@@ -8,10 +8,6 @@ import lombok.Setter;
 
 import java.util.List;
 
-/**
- * DTO for sending the user's profile data to the React dashboard.
- * All dynamic economy configs are now passed here to prevent frontend hardcoding.
- */
 @Getter
 @Setter
 @Builder
@@ -66,18 +62,16 @@ public class PlayerProfileResponse {
     private int bakeries;
     private int huntingLodges;
 
-    // List of real database building instances for the UI to map uniquely
     private List<BuildingInstanceResponse> buildings;
-
     private List<ConstructionTaskResponse> activeConstructions;
     private List<TrainingTaskResponse> activeTrainingTasks;
     private List<TrainingConfigResponse> trainingConfigs;
-
-    // Added to pass dynamic building costs/timers to the UI
     private List<BuildingConfigResponse> buildingConfigs;
-
-    // The Kingdom's historical event log
     private List<LedgerEventResponse> ledgerEvents;
+
+    // --- PROGRESSION GATING ---
+    private List<UpgradeTaskResponse> activeUpgrades;
+    private KeepUpgradeRequirementsResponse keepUpgradeRequirements;
 
     @Data
     @Builder

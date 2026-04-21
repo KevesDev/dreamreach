@@ -7,14 +7,8 @@ import com.keves.dreamreach.entity.PlayerAccount;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.entity.PlayerPopulation;
 import com.keves.dreamreach.exception.ResourceNotFoundException;
-import com.keves.dreamreach.repository.ConstructionTaskRepository;
-import com.keves.dreamreach.repository.LedgerEntryRepository;
-import com.keves.dreamreach.repository.PlayerAccountRepository;
-import com.keves.dreamreach.repository.TrainingTaskRepository;
-import com.keves.dreamreach.service.AccountCleanupService;
-import com.keves.dreamreach.service.EconomyService;
-import com.keves.dreamreach.service.TavernService;
-import com.keves.dreamreach.service.TrainingService;
+import com.keves.dreamreach.repository.*;
+import com.keves.dreamreach.service.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -38,17 +32,25 @@ public class PlayerController {
     private final AccountCleanupService cleanupService;
     private final TrainingService trainingService;
     private final LedgerEntryRepository ledgerRepository;
+    private final KeepLevelingService keepLevelingService;
+    private final UpgradeService upgradeService;
+    private final UpgradeTaskRepository upgradeTaskRepository;
+    private final PlayerCharacterRepository charRepo;
 
     public PlayerController(PlayerAccountRepository accountRepository, GameEconomyConfig economyConfig,
                             EconomyService economyService, ConstructionTaskRepository constructionTaskRepository,
                             TrainingTaskRepository trainingTaskRepository, TavernService tavernService,
                             AccountCleanupService cleanupService, TrainingService trainingService,
-                            LedgerEntryRepository ledgerRepository) {
+                            LedgerEntryRepository ledgerRepository, KeepLevelingService keepLevelingService,
+                            UpgradeService upgradeService, UpgradeTaskRepository upgradeTaskRepository,
+                            PlayerCharacterRepository charRepo) {
         this.accountRepository = accountRepository; this.economyConfig = economyConfig;
         this.economyService = economyService; this.constructionTaskRepository = constructionTaskRepository;
         this.trainingTaskRepository = trainingTaskRepository; this.tavernService = tavernService;
         this.cleanupService = cleanupService; this.trainingService = trainingService;
-        this.ledgerRepository = ledgerRepository;
+        this.ledgerRepository = ledgerRepository; this.keepLevelingService = keepLevelingService;
+        this.upgradeService = upgradeService; this.upgradeTaskRepository = upgradeTaskRepository;
+        this.charRepo = charRepo;
     }
 
     @GetMapping("/me")
@@ -70,9 +72,18 @@ public class PlayerController {
         int woodRate = (pop != null ? pop.getWoodcutters() * economyConfig.getWoodPerWoodcutter() : 0) + economyConfig.getBasePassiveWood();
         int stoneRate = (pop != null ? pop.getStoneworkers() * economyConfig.getStonePerStoneworker() : 0) + economyConfig.getBasePassiveStone();
 
-        List<BuildingInstanceResponse> buildingResponses = profile.getBuildings().stream().map(b -> BuildingInstanceResponse.builder().id(b.getId()).buildingType(b.getBuildingType()).level(b.getLevel()).assignedWorkers(b.getAssignedWorkers()).build()).collect(Collectors.toList());
+        List<BuildingInstanceResponse> buildingResponses = profile.getBuildings().stream().map(b -> BuildingInstanceResponse.builder()
+                .id(b.getId()).buildingType(b.getBuildingType()).level(b.getLevel()).assignedWorkers(b.getAssignedWorkers())
+                .nextLevelWoodCost(upgradeService.getUpgradeWoodCost(b.getBuildingType(), b.getLevel() + 1))
+                .nextLevelStoneCost(upgradeService.getUpgradeStoneCost(b.getBuildingType(), b.getLevel() + 1))
+                .nextLevelTimeSeconds(upgradeService.getUpgradeTimeSeconds(b.getBuildingType(), b.getLevel() + 1))
+                .build()).collect(Collectors.toList());
+
         List<ConstructionTaskResponse> activeTasks = constructionTaskRepository.findByProfileId(profile.getId()).stream().map(task -> ConstructionTaskResponse.builder().buildingType(task.getBuildingType()).targetLevel(task.getTargetLevel()).startTimeEpoch(task.getStartTime().toEpochMilli()).completionTimeEpoch(task.getCompletionTime().toEpochMilli()).build()).collect(Collectors.toList());
         List<TrainingTaskResponse> activeTrainingTasks = trainingTaskRepository.findByProfileIdOrderByStartTimeAsc(profile.getId()).stream().map(task -> TrainingTaskResponse.builder().id(task.getId().toString()).professionType(task.getProfessionType()).startTimeEpoch(task.getStartTime().toEpochMilli()).completionTimeEpoch(task.getCompletionTime().toEpochMilli()).build()).collect(Collectors.toList());
+
+        List<UpgradeTaskResponse> activeUpgrades = upgradeTaskRepository.findByProfileId(profile.getId()).stream()
+                .map(u -> UpgradeTaskResponse.builder().buildingInstanceId(u.getBuildingInstance().getId().toString()).buildingType(u.getBuildingInstance().getBuildingType()).targetLevel(u.getTargetLevel()).startTimeEpoch(u.getStartTime().toEpochMilli()).completionTimeEpoch(u.getCompletionTime().toEpochMilli()).build()).collect(Collectors.toList());
 
         List<TrainingConfigResponse> trainingConfigs = List.of(
                 TrainingConfigResponse.builder().professionType("woodcutter").goldCost(economyConfig.getCostTrainWoodcutterGold()).foodCost(economyConfig.getCostTrainWoodcutterFood()).trainTimeSeconds(economyConfig.getTrainTimeWoodcutterSeconds()).build(),
@@ -85,18 +96,26 @@ public class PlayerController {
                 BuildingConfigResponse.builder().buildingType("house").woodCost(economyConfig.getCostHouseWood()).stoneCost(economyConfig.getCostHouseStone()).buildTimeSeconds(economyConfig.getBuildTimeHouse()).maxWorkers(0).productionRate(0).unlockKeepLevel(1).build(),
                 BuildingConfigResponse.builder().buildingType("bakery").woodCost(economyConfig.getCostBakeryWood()).stoneCost(economyConfig.getCostBakeryStone()).buildTimeSeconds(economyConfig.getBuildTimeBakery()).maxWorkers(economyConfig.getMaxWorkersBakery()).productionRate(economyConfig.getFoodPerBaker()).unlockKeepLevel(1).build(),
                 BuildingConfigResponse.builder().buildingType("lodge").woodCost(economyConfig.getCostLodgeWood()).stoneCost(economyConfig.getCostLodgeStone()).buildTimeSeconds(economyConfig.getBuildTimeLodge()).maxWorkers(economyConfig.getMaxWorkersLodge()).productionRate(economyConfig.getFoodPerHunter()).unlockKeepLevel(1).build(),
+                BuildingConfigResponse.builder().buildingType("tower").woodCost(economyConfig.getCostTowerWood()).stoneCost(economyConfig.getCostTowerStone()).buildTimeSeconds(economyConfig.getBuildTimeTower()).maxWorkers(0).productionRate(0).unlockKeepLevel(economyConfig.getTowerUnlockLevel()).build(),
                 BuildingConfigResponse.builder().buildingType("tavern").woodCost(economyConfig.getCostTavernWood()).stoneCost(economyConfig.getCostTavernStone()).buildTimeSeconds(economyConfig.getBuildTimeTavern()).maxWorkers(0).productionRate(0).unlockKeepLevel(economyConfig.getTavernUnlockLevel()).build()
         );
 
         List<PlayerProfileResponse.LedgerEventResponse> ledgerResponses = ledgerRepository.findByProfileIdOrderByTimestampDesc(profile.getId())
                 .stream()
-                .map(log -> PlayerProfileResponse.LedgerEventResponse.builder()
-                        .id(log.getId().toString())
-                        .timestampEpoch(log.getTimestamp().toEpochMilli())
-                        .category(log.getCategory())
-                        .message(log.getMessage())
-                        .build())
+                .map(log -> PlayerProfileResponse.LedgerEventResponse.builder().id(log.getId().toString()).timestampEpoch(log.getTimestamp().toEpochMilli()).category(log.getCategory()).message(log.getMessage()).build())
                 .collect(Collectors.toList());
+
+        int targetKeepLevel = keepLevel + 1;
+        long currentValidHeroes = charRepo.findByOwnerId(profile.getId()).stream().filter(c -> c.getCurrentLevel() >= keepLevelingService.getRequiredHeroLevel(targetKeepLevel)).count();
+
+        KeepUpgradeRequirementsResponse keepReqs = KeepUpgradeRequirementsResponse.builder()
+                .targetLevel(targetKeepLevel).reqPopulation(keepLevelingService.getRequiredPopulation(targetKeepLevel))
+                .currentPopulation(pop != null ? pop.getTotalPopulation() : 0).reqHeroCount(keepLevelingService.getRequiredHeroCount(targetKeepLevel))
+                .reqHeroLevel(keepLevelingService.getRequiredHeroLevel(targetKeepLevel)).currentValidHeroes(currentValidHeroes)
+                .reqWood(keepLevelingService.getWoodCost(targetKeepLevel, keepLevel)).reqStone(keepLevelingService.getStoneCost(targetKeepLevel, keepLevel))
+                .currentWood(profile.getResources() != null ? profile.getResources().getWood() : 0).currentStone(profile.getResources() != null ? profile.getResources().getStone() : 0)
+                .upgradeTimeSeconds(keepLevelingService.getUpgradeTimeMinutes(targetKeepLevel) * 60)
+                .build();
 
         PlayerProfileResponse response = PlayerProfileResponse.builder()
                 .email(account.getEmail()).displayName(account.getProfile().getDisplayName()).pvpEnabled(account.getProfile().isEffectivelyPvpEnabled()).isAdmin(account.isAdmin())
@@ -109,8 +128,8 @@ public class PlayerController {
                 .idlePeasants(pop != null ? pop.getIdlePeasants() : 0).woodcutters(pop != null ? pop.getWoodcutters() : 0).stoneworkers(pop != null ? pop.getStoneworkers() : 0).hunters(pop != null ? pop.getHunters() : 0).bakers(pop != null ? pop.getBakers() : 0)
                 .keepLevel(keepLevel).maxStorage(maxStorage).houses(houseCount)
                 .buildings(buildingResponses).activeConstructions(activeTasks).activeTrainingTasks(activeTrainingTasks)
-                .trainingConfigs(trainingConfigs).buildingConfigs(buildingConfigs)
-                .ledgerEvents(ledgerResponses)
+                .trainingConfigs(trainingConfigs).buildingConfigs(buildingConfigs).ledgerEvents(ledgerResponses)
+                .activeUpgrades(activeUpgrades).keepUpgradeRequirements(keepReqs)
                 .build();
         return ResponseEntity.ok(response);
     }
