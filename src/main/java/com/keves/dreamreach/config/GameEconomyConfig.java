@@ -63,7 +63,7 @@ public class GameEconomyConfig {
     private int targetModAvailableHousing = 10;
     private int targetModFullHousing = -10;
 
-    private int targetModAvailableJobs = 15;
+    private int targetModAvailableJobs = 10;
     private int targetModNoJobs = -10;
 
     // --- TAXES (GOLD MULTIPLIERS) ---
@@ -100,8 +100,8 @@ public class GameEconomyConfig {
     private int costTowerStone = 100;
 
     // The base construction cost for the Tavern
-    private int costTavernWood = 10;
-    private int costTavernStone = 10;
+    private int costTavernWood = 80;
+    private int costTavernStone = 120;
 
     // --- CONSTRUCTION BASE TIMERS (in seconds) ---
     private int buildTimeHouse = 60;     // 1 min
