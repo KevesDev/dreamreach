@@ -44,10 +44,8 @@ export default function BuildingSidePanel({
 
     const activeTask = profile?.activeConstructions?.find((t: ConstructionTaskResponse) => t.buildingType === selectedGroup.type);
 
-    // Identifies if the specific instance being viewed has an active upgrade timer
     const activeUpgrade = displayInstance ? profile?.activeUpgrades?.find((u: UpgradeTaskResponse) => u.buildingInstanceId === displayInstance.id) : null;
 
-    // Pull the Keep requirements data directly from the profile payload
     const kr = profile?.keepUpgradeRequirements;
 
     const getGlobalWorkerCount = (type: string) => {
@@ -153,11 +151,13 @@ export default function BuildingSidePanel({
     let occupants = 0;
     let houseCapacity = 5;
 
-    if (isHouse && displayInstance) {
+    if (isHouse) {
         houseCapacity = Math.round(profile.maxPopulation / Math.max(1, profile.houses));
-        const instanceIndex = profile.buildings?.filter(b => b.buildingType === 'house').findIndex(b => b.id === displayInstance.id) || 0;
-        const previousOccupants = instanceIndex * houseCapacity;
-        occupants = Math.max(0, Math.min(houseCapacity, profile.totalPopulation - previousOccupants));
+        if (displayInstance) {
+            const instanceIndex = profile.buildings?.filter(b => b.buildingType === 'house').findIndex(b => b.id === displayInstance.id) || 0;
+            const previousOccupants = instanceIndex * houseCapacity;
+            occupants = Math.max(0, Math.min(houseCapacity, profile.totalPopulation - previousOccupants));
+        }
     }
 
     const renderTavernInterior = () => {
@@ -191,8 +191,9 @@ export default function BuildingSidePanel({
     };
 
     return (
-        <aside className="side-panel">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <aside className="side-panel" style={{ display: 'flex', flexDirection: 'column', maxHeight: '100%', overflow: 'hidden' }}>
+            {/* STICKY HEADER */}
+            <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: '12px' }}>
                 <div>
                     <h3 style={{ color: 'var(--accent-gold)' }}>
                         {displayInstance ? `${selectedGroup.singularName} (Lvl ${displayInstance.level})` : selectedGroup.name}
@@ -206,56 +207,60 @@ export default function BuildingSidePanel({
                 <button className="button" style={{ padding: '2px 8px' }} onClick={onClose}>×</button>
             </div>
 
+            {/* OVERVIEW MODE (Roster List) */}
             {!displayInstance && (
                 <>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{selectedGroup.description}</p>
+                    <div style={{ flexShrink: 0 }}>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{selectedGroup.description}</p>
 
-                    {selectedGroup.type === 'keep' && (
-                        <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
-                            <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-sm)', color: 'var(--text-muted)' }}>ROYAL TREASURY</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
-                                    <span>Kingdom Happiness</span>
-                                    <span style={{ color: profile.happiness >= hapHigh ? 'var(--success)' : profile.happiness <= hapLow ? 'var(--danger)' : 'var(--text-primary)', fontWeight: 'bold' }}>{profile.happiness} / {profile.maxHappiness}</span>
-                                </div>
-                                <div className="progress-bar-container">
-                                    <div className="progress-bar-fill" style={{ width: `${(profile.happiness / profile.maxHappiness) * 100}%`, background: profile.happiness >= hapHigh ? 'var(--success)' : profile.happiness <= hapLow ? 'var(--danger)' : 'var(--accent-blue)', transition: 'width 0.5s ease-out' }}></div>
-                                </div>
-                                <div style={{ marginTop: '8px' }}>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Tax Policy:</div>
-                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                        {['LOW', 'NORMAL', 'HIGH'].map(bracket => (
-                                            <button key={bracket} style={{ flex: 1, padding: '6px 0', background: profile.taxBracket === bracket ? 'var(--surface-2)' : 'transparent', border: `1px solid ${profile.taxBracket === bracket ? 'var(--accent-gold)' : 'var(--border-subtle)'}`, color: profile.taxBracket === bracket ? 'var(--accent-gold)' : 'var(--text-muted)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s' }} onClick={() => handleTaxChange(bracket)} disabled={isBusy}>{bracket}</button>
-                                        ))}
+                        {selectedGroup.type === 'keep' && (
+                            <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
+                                <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-sm)', color: 'var(--text-muted)' }}>ROYAL TREASURY</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
+                                        <span>Kingdom Happiness</span>
+                                        <span style={{ color: profile.happiness >= hapHigh ? 'var(--success)' : profile.happiness <= hapLow ? 'var(--danger)' : 'var(--text-primary)', fontWeight: 'bold' }}>{profile.happiness} / {profile.maxHappiness}</span>
+                                    </div>
+                                    <div className="progress-bar-container">
+                                        <div className="progress-bar-fill" style={{ width: `${(profile.happiness / profile.maxHappiness) * 100}%`, background: profile.happiness >= hapHigh ? 'var(--success)' : profile.happiness <= hapLow ? 'var(--danger)' : 'var(--accent-blue)', transition: 'width 0.5s ease-out' }}></div>
+                                    </div>
+                                    <div style={{ marginTop: '8px' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Tax Policy:</div>
+                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                            {['LOW', 'NORMAL', 'HIGH'].map(bracket => (
+                                                <button key={bracket} style={{ flex: 1, padding: '6px 0', background: profile.taxBracket === bracket ? 'var(--surface-2)' : 'transparent', border: `1px solid ${profile.taxBracket === bracket ? 'var(--accent-gold)' : 'var(--border-subtle)'}`, color: profile.taxBracket === bracket ? 'var(--accent-gold)' : 'var(--text-muted)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s' }} onClick={() => handleTaxChange(bracket)} disabled={isBusy}>{bracket}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div style={{ background: 'var(--surface-1)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginTop: '8px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Pending Vault:</span>
+                                            <span style={{ color: 'var(--accent-gold)', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', fontWeight: 'bold' }}>{Math.floor(profile.pendingGold)} G</span>
+                                        </div>
+                                        <button className="button button--claim" style={{ width: '100%' }} onClick={handleCollectTaxes} disabled={isBusy || (profile.lastTaxCollectionTimeEpoch > 0 && now - profile.lastTaxCollectionTimeEpoch < 3600000)}>
+                                            { (profile.lastTaxCollectionTimeEpoch > 0 && now - profile.lastTaxCollectionTimeEpoch >= 3600000) ? 'Collect Taxes' : `Wait ${formatTimeRemainingTaxes((profile.lastTaxCollectionTimeEpoch||0) + 3600000, now)}` }
+                                        </button>
                                     </div>
                                 </div>
-                                <div style={{ background: 'var(--surface-1)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginTop: '8px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                        <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Pending Vault:</span>
-                                        <span style={{ color: 'var(--accent-gold)', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', fontWeight: 'bold' }}>{Math.floor(profile.pendingGold)} G</span>
+                            </div>
+                        )}
+
+                        {getGlobalWorkerCount(selectedGroup.type) && (
+                            <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
+                                <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-sm)', color: 'var(--text-muted)' }}>KINGDOM LABOR</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-gold)' }}>
+                                        <span>{getGlobalWorkerCount(selectedGroup.type)!.label}:</span>
+                                        <span>{getGlobalWorkerCount(selectedGroup.type)!.count}</span>
                                     </div>
-                                    <button className="button button--claim" style={{ width: '100%' }} onClick={handleCollectTaxes} disabled={isBusy || (profile.lastTaxCollectionTimeEpoch > 0 && now - profile.lastTaxCollectionTimeEpoch < 3600000)}>
-                                        { (profile.lastTaxCollectionTimeEpoch > 0 && now - profile.lastTaxCollectionTimeEpoch >= 3600000) ? 'Collect Taxes' : `Wait ${formatTimeRemainingTaxes((profile.lastTaxCollectionTimeEpoch||0) + 3600000, now)}` }
-                                    </button>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
 
-                    {getGlobalWorkerCount(selectedGroup.type) && (
-                        <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
-                            <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-sm)', color: 'var(--text-muted)' }}>KINGDOM LABOR</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-gold)' }}>
-                                    <span>{getGlobalWorkerCount(selectedGroup.type)!.label}:</span>
-                                    <span>{getGlobalWorkerCount(selectedGroup.type)!.count}</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'var(--space-lg)' }}>
-                        <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>YOUR STRUCTURES</h4>
+                    {/* SCROLLABLE ROSTER LIST */}
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px', paddingRight: '4px' }}>
+                        <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>YOUR STRUCTURES</h4>
                         {selectedGroup.instances.length === 0 && (<span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>You don't have any of these structures.</span>)}
 
                         {selectedGroup.instances.length === 1 && (selectedGroup.type === 'tavern' || selectedGroup.type === 'keep') ? (
@@ -263,17 +268,38 @@ export default function BuildingSidePanel({
                                 {selectedGroup.type === 'tavern' ? 'Enter the Tavern' : 'View Vault & Upgrades'}
                             </button>
                         ) : (
-                            selectedGroup.instances.map((instance, index) => (
-                                <div key={instance.id} className="instance-item" onClick={() => onSelectInstance(instance)}>
-                                    <span className="instance-item-title">{selectedGroup.singularName} #{index + 1}</span>
-                                    <span className="instance-item-level">Lvl {instance.level}</span>
-                                </div>
-                            ))
-                        )}
+                            selectedGroup.instances.map((instance, index) => {
+                                let dynamicData = null;
+                                if (selectedGroup.type === 'house') {
+                                    const previousOccupants = index * houseCapacity;
+                                    const occ = Math.max(0, Math.min(houseCapacity, profile.totalPopulation - previousOccupants));
+                                    dynamicData = <span style={{ color: occ === 0 ? 'var(--text-muted)' : 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '6px' }}><Icon name="user" size={14} /> {occ}/{houseCapacity}</span>;
+                                } else if (instance.maxWorkers > 0) {
+                                    dynamicData = <span style={{ color: instance.assignedWorkers === 0 ? 'var(--danger)' : 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '6px' }}><Icon name="user" size={14} /> {instance.assignedWorkers}/{instance.maxWorkers}</span>;
+                                } else if (selectedGroup.type === 'tower') {
+                                    dynamicData = <span style={{ color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}><Icon name="combat" size={14} /> Passive Def</span>;
+                                }
 
+                                return (
+                                    <div key={instance.id} className="instance-item" onClick={() => onSelectInstance(instance)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)' }}>{selectedGroup.singularName} #{index + 1}</span>
+                                            <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'var(--surface-2)', borderRadius: '12px', color: 'var(--text-muted)' }}>Lv.{instance.level}</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.85rem' }}>
+                                            {dynamicData}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    {/* STICKY FOOTER (Construct New / Upgrade Keep) */}
+                    <div style={{ flexShrink: 0, marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-strong)' }}>
                         {selectedGroup.type !== 'keep' && (
                             activeTask ? (
-                                <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-sm)', padding: '12px' }}>
+                                <div className="panel" style={{ background: 'var(--bg-elevated)', padding: '12px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
                                         <span style={{ color: 'var(--accent-gold)' }}>Constructing Lvl {activeTask.targetLevel}...</span>
                                         <span style={{ fontFamily: 'monospace' }}>{formatTimeRemaining(activeTask.completionTimeEpoch, now)}</span>
@@ -287,7 +313,7 @@ export default function BuildingSidePanel({
                                 </div>
                             ) : (
                                 (selectedGroup.type !== 'tavern' || selectedGroup.instances.length === 0) && (
-                                    <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-sm)', padding: '12px', borderRadius: '8px' }}>
+                                    <div className="panel" style={{ background: 'var(--bg-elevated)', padding: '12px', borderRadius: '8px' }}>
                                         {selectedGroup.cost && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--border-subtle)' }}>
                                                 <span>Cost: <span style={{ color: canAfford ? 'var(--accent-gold)' : 'var(--danger)' }}>{selectedGroup.cost.wood} Wood, {selectedGroup.cost.stone} Stone</span></span>
@@ -307,8 +333,9 @@ export default function BuildingSidePanel({
                 </>
             )}
 
+            {/* SPECIFIC INSTANCE MODE */}
             {displayInstance && (
-                <>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingRight: '4px' }}>
                     {selectedGroup.type === 'keep' ? (
                         <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
                             <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-md)', color: 'var(--text-muted)' }}>VAULT STORAGE</h4>
@@ -371,8 +398,8 @@ export default function BuildingSidePanel({
                         </div>
                     ) : null}
 
-                    {/* UPGRADE INTERFACE */}
-                    <div style={{ marginTop: 'auto' }}>
+                    {/* UPGRADE INTERFACE (Sticky to bottom of instance view) */}
+                    <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
                         {activeUpgrade ? (
                             <div className="panel" style={{ background: 'var(--bg-elevated)', padding: '12px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
@@ -409,7 +436,7 @@ export default function BuildingSidePanel({
                                             <span style={{ color: 'var(--accent-gold)' }}>{kr ? Math.floor(kr.upgradeTimeSeconds / 3600) : 0} Hours</span>
                                         </div>
                                         <button className="button--primary" style={{ width: '100%', marginTop: '8px' }} disabled={isBusy || !isKeepReqsMet} onClick={handleUpgradeStart}>
-                                            ERA SHIFT TO LV.{displayInstance.level + 1}
+                                            UPGRADE LV.{displayInstance.level + 1}
                                         </button>
                                     </div>
                                 ) : (
@@ -433,7 +460,7 @@ export default function BuildingSidePanel({
                             </div>
                         )}
                     </div>
-                </>
+                </div>
             )}
         </aside>
     );
