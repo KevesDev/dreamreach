@@ -43,8 +43,13 @@ public class ConstructionService {
         economyService.updateProductionState(profile);
 
         if (taskRepository.findByProfileIdAndBuildingType(profile.getId(), buildingType.toLowerCase()).isPresent()) {
-            throw new IllegalStateException("You are already constructing or upgrading a " + buildingType + ".");
+            throw new IllegalStateException("You are already constructing a " + buildingType + ".");
         }
+
+        int currentKeepLevel = profile.getBuildings().stream()
+                .filter(b -> b.getBuildingType().equalsIgnoreCase("keep"))
+                .mapToInt(BuildingInstance::getLevel)
+                .max().orElse(1);
 
         int costWood = 0;
         int costStone = 0;
@@ -62,6 +67,9 @@ public class ConstructionService {
                 buildTimeSeconds = config.getBuildTimeBakery();
                 break;
             case "tower":
+                if (currentKeepLevel < config.getTowerUnlockLevel()) {
+                    throw new IllegalStateException("Requires Keep Level " + config.getTowerUnlockLevel());
+                }
                 costWood = config.getCostTowerWood();
                 costStone = config.getCostTowerStone();
                 buildTimeSeconds = config.getBuildTimeTower();
@@ -72,7 +80,9 @@ public class ConstructionService {
                 buildTimeSeconds = config.getBuildTimeLodge();
                 break;
             case "tavern":
-                // Strict backend validation to prevent players from spoofing API calls to build multiple taverns
+                if (currentKeepLevel < config.getTavernUnlockLevel()) {
+                    throw new IllegalStateException("Requires Keep Level " + config.getTavernUnlockLevel());
+                }
                 if (profile.getBuildings().stream().anyMatch(b -> b.getBuildingType().equalsIgnoreCase("tavern"))) {
                     throw new IllegalStateException("You can only have one Tavern in your kingdom.");
                 }
@@ -116,7 +126,6 @@ public class ConstructionService {
             throw new IllegalStateException("The construction of " + buildingType + " is not yet complete.");
         }
 
-        // Spawn a new physical instance in the kingdom
         BuildingInstance newBuilding = new BuildingInstance();
         newBuilding.setBuildingType(buildingType.toLowerCase());
         newBuilding.setLevel(1);
@@ -128,7 +137,6 @@ public class ConstructionService {
         taskRepository.delete(task);
         profileRepository.save(profile);
 
-        // Record the event in the Ledger using dynamic config
         String msg = ledgerConfig.getConstructionCompleteMessage()
                 .replace("{buildingType}", buildingType.toLowerCase());
         ledgerService.appendLog(profile, "CIVIC", msg);
