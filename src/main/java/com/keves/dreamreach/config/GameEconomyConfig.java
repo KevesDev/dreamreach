@@ -63,7 +63,7 @@ public class GameEconomyConfig {
     private int targetModAvailableHousing = 10;
     private int targetModFullHousing = -10;
 
-    private int targetModAvailableJobs = 10;
+    private int targetModAvailableJobs = 15;
     private int targetModNoJobs = -10;
 
     // --- TAXES (GOLD MULTIPLIERS) ---
@@ -100,8 +100,11 @@ public class GameEconomyConfig {
     private int costTowerStone = 100;
 
     // The base construction cost for the Tavern
-    private int costTavernWood = 80;
-    private int costTavernStone = 120;
+    private int costTavernWood = 100;
+    private int costTavernStone = 150;
+
+    // --- BUILDING UNLOCK LEVELS (Keep Level Required) ---
+    private int towerUnlockLevel = 3;
 
     // --- CONSTRUCTION BASE TIMERS (in seconds) ---
     private int buildTimeHouse = 60;     // 1 min
@@ -111,6 +114,9 @@ public class GameEconomyConfig {
 
     // The base construction time for the Tavern
     private int buildTimeTavern = 600;   // 10 mins
+
+    // The exponent applied to the base timer for upgrading existing structures
+    private double buildingUpgradeTimeExponent = 1.5;
 
     // --- TAVERN RECRUITMENT LOGIC ---
     // The required Keep Level to construct or access the Tavern
