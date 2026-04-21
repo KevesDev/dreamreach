@@ -58,14 +58,6 @@ export default function BuildingSidePanel({
         }
     };
 
-    const getWorkerName = (type: string) => {
-        switch(type.toLowerCase()) {
-            case 'bakery': return 'Bakers';
-            case 'lodge': return 'Hunters';
-            default: return 'Workers';
-        }
-    };
-
     const getUnassignedCount = (type: string) => {
         const total = type.toLowerCase() === 'bakery' ? profile?.bakers : profile?.hunters;
         const assigned = (profile?.buildings || [])
@@ -234,8 +226,8 @@ export default function BuildingSidePanel({
                                         <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Pending Vault:</span>
                                         <span style={{ color: 'var(--accent-gold)', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', fontWeight: 'bold' }}>{Math.floor(profile.pendingGold)} G</span>
                                     </div>
-                                    <button className="button button--claim" style={{ width: '100%' }} onClick={handleCollectTaxes} disabled={isBusy || (profile.lastTaxCollectionTimeEpoch && now - profile.lastTaxCollectionTimeEpoch < 3600000)}>
-                                        { (profile.lastTaxCollectionTimeEpoch && now - profile.lastTaxCollectionTimeEpoch >= 3600000) ? 'Collect Taxes' : `Wait ${formatTimeRemainingTaxes((profile.lastTaxCollectionTimeEpoch||0) + 3600000, now)}` }
+                                    <button className="button button--claim" style={{ width: '100%' }} onClick={handleCollectTaxes} disabled={isBusy || (profile.lastTaxCollectionTimeEpoch > 0 && now - profile.lastTaxCollectionTimeEpoch < 3600000)}>
+                                        { (profile.lastTaxCollectionTimeEpoch > 0 && now - profile.lastTaxCollectionTimeEpoch >= 3600000) ? 'Collect Taxes' : `Wait ${formatTimeRemainingTaxes((profile.lastTaxCollectionTimeEpoch||0) + 3600000, now)}` }
                                     </button>
                                 </div>
                             </div>
