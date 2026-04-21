@@ -24,4 +24,6 @@ public class GameLedgerConfig {
     private String trainingCompleteMessage = "{count} peasant(s) have finished their training as {profession}.";
     private String constructionCompleteMessage = "Construction of a new {buildingType} has been completed.";
 
+    private String upgradeCompleteMessage = "The {buildingType} has been upgraded to Level {level}.";
+    private String keepUpgradeCompleteMessage = "A grand celebration marks the expansion of the Keep to Level {level}.";
 }
