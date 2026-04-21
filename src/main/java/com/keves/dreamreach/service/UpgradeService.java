@@ -150,10 +150,12 @@ public class UpgradeService {
         taskRepository.delete(task);
         buildingRepository.save(building);
 
-        // Ledger Hook for Civic Progress
+        // Ledger Hook for Civic Progress utilizing the config
         String msg = building.getBuildingType().equalsIgnoreCase("keep")
-                ? "A grand celebration marks the expansion of the Keep to Level " + building.getLevel() + "."
-                : "The " + building.getBuildingType() + " has been upgraded to Level " + building.getLevel() + ".";
+                ? ledgerConfig.getKeepUpgradeCompleteMessage().replace("{level}", String.valueOf(building.getLevel()))
+                : ledgerConfig.getUpgradeCompleteMessage()
+                .replace("{buildingType}", building.getBuildingType())
+                .replace("{level}", String.valueOf(building.getLevel()));
 
         ledgerService.appendLog(profile, "CIVIC", msg);
     }

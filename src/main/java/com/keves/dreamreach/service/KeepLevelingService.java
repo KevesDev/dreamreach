@@ -3,10 +3,10 @@ package com.keves.dreamreach.service;
 import com.keves.dreamreach.config.GameKeepConfig;
 import com.keves.dreamreach.config.GameEconomyConfig;
 import com.keves.dreamreach.entity.BuildingInstance;
-import com.keves.dreamreach.entity.PlayerCharacter;
 import com.keves.dreamreach.entity.PlayerProfile;
 import com.keves.dreamreach.entity.PlayerResources;
 import com.keves.dreamreach.entity.UpgradeTask;
+import com.keves.dreamreach.repository.PlayerCharacterRepository;
 import com.keves.dreamreach.repository.PlayerProfileRepository;
 import com.keves.dreamreach.repository.UpgradeTaskRepository;
 import org.springframework.stereotype.Service;
@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 
 @Service
 public class KeepLevelingService {
@@ -22,15 +21,17 @@ public class KeepLevelingService {
     private final GameKeepConfig keepConfig;
     private final GameEconomyConfig economyConfig;
     private final PlayerProfileRepository profileRepository;
+    private final PlayerCharacterRepository charRepo;
     private final UpgradeTaskRepository upgradeTaskRepository;
     private final EconomyService economyService;
 
     public KeepLevelingService(GameKeepConfig keepConfig, GameEconomyConfig economyConfig,
-                               PlayerProfileRepository profileRepository, UpgradeTaskRepository upgradeTaskRepository,
-                               EconomyService economyService) {
+                               PlayerProfileRepository profileRepository, PlayerCharacterRepository charRepo,
+                               UpgradeTaskRepository upgradeTaskRepository, EconomyService economyService) {
         this.keepConfig = keepConfig;
         this.economyConfig = economyConfig;
         this.profileRepository = profileRepository;
+        this.charRepo = charRepo;
         this.upgradeTaskRepository = upgradeTaskRepository;
         this.economyService = economyService;
     }
@@ -89,7 +90,7 @@ public class KeepLevelingService {
 
         // --- VALIDATE HERO ROSTER ---
         int reqHeroLevel = getRequiredHeroLevel(targetLevel);
-        long validHeroCount = profile.getCharacters().stream()
+        long validHeroCount = charRepo.findByOwnerId(profile.getId()).stream()
                 .filter(c -> c.getCurrentLevel() >= reqHeroLevel)
                 .count();
         if (validHeroCount < getRequiredHeroCount(targetLevel)) {
