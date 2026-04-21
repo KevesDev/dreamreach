@@ -13,18 +13,18 @@ public class GameKeepConfig {
 
     // --- POPULATION SCALING ---
     // Formula: basePopulation * (targetLevel ^ populationExponent)
-    private int basePopulation = 50;
+    private int basePopulation = 71;
     private double populationExponent = 1.5;
 
     // --- HERO ROSTER SCALING (Horizontal Progression) ---
     // Formula: baseHeroCount * (targetLevel ^ heroCountExponent)
-    private int baseHeroCount = 1;
-    private double heroCountExponent = 1.2;
+    private int baseHeroCount = 2;
+    private double heroCountExponent = 1;
 
     // --- HERO LEVEL SCALING (Vertical Progression) ---
     // Formula: baseHeroLevel * (targetLevel ^ heroLevelExponent)
-    private int baseHeroLevel = 2;
-    private double heroLevelExponent = 1.1;
+    private int baseHeroLevel = 1;
+    private double heroLevelExponent = 1;
 
     // --- RESOURCE COST SCALING ---
     // Formula: baseCost * (targetLevel ^ costExponent)
