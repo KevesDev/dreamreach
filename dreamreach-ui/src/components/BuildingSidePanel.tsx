@@ -58,6 +58,14 @@ export default function BuildingSidePanel({
         }
     };
 
+    const getWorkerName = (type: string) => {
+        switch(type.toLowerCase()) {
+            case 'bakery': return 'Bakers';
+            case 'lodge': return 'Hunters';
+            default: return 'Workers';
+        }
+    };
+
     const getUnassignedCount = (type: string) => {
         const total = type.toLowerCase() === 'bakery' ? profile?.bakers : profile?.hunters;
         const assigned = (profile?.buildings || [])
@@ -345,7 +353,7 @@ export default function BuildingSidePanel({
                             {displayInstance.maxWorkers > 0 && (
                                 <div style={{ marginBottom: 'var(--space-lg)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
-                                        <span>Assigned Workers:</span>
+                                        <span>Assigned {getWorkerName(selectedGroup.type)}:</span>
                                         <span style={{ color: 'var(--accent-gold)' }}>{displayInstance.assignedWorkers} / {displayInstance.maxWorkers}</span>
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px' }}>
