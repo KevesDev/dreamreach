@@ -1,4 +1,4 @@
-import type { BuildingGroup, BuildingInstance, PlayerProfile, ConstructionTaskResponse, TavernListing } from '../views/KingdomView';
+import type { BuildingGroup, BuildingInstance, PlayerProfile, ConstructionTaskResponse, TavernListing, UpgradeTaskResponse } from '../views/KingdomView';
 import api from '../api/client';
 import { Icon } from './Icon';
 
@@ -36,12 +36,19 @@ export default function BuildingSidePanel({
     const displayInstance = liveInstance ? {
         ...liveInstance,
         maxWorkers: selectedInstance?.maxWorkers || 0,
-        productionRate: selectedInstance?.productionRate || 0
+        productionRate: selectedInstance?.productionRate || 0,
+        nextLevelWoodCost: selectedInstance?.nextLevelWoodCost || 0,
+        nextLevelStoneCost: selectedInstance?.nextLevelStoneCost || 0,
+        nextLevelTimeSeconds: selectedInstance?.nextLevelTimeSeconds || 0
     } : selectedInstance;
 
-    const activeTask = profile?.activeConstructions?.find(
-        (t: ConstructionTaskResponse) => t.buildingType === selectedGroup.type
-    );
+    const activeTask = profile?.activeConstructions?.find((t: ConstructionTaskResponse) => t.buildingType === selectedGroup.type);
+
+    // Identifies if the specific instance being viewed has an active upgrade timer
+    const activeUpgrade = displayInstance ? profile?.activeUpgrades?.find((u: UpgradeTaskResponse) => u.buildingInstanceId === displayInstance.id) : null;
+
+    // Pull the Keep requirements data directly from the profile payload
+    const kr = profile?.keepUpgradeRequirements;
 
     const getGlobalWorkerCount = (type: string) => {
         switch(type.toLowerCase()) {
@@ -80,9 +87,7 @@ export default function BuildingSidePanel({
         const m = Math.floor((diffSeconds % 3600) / 60);
         const s = diffSeconds % 60;
 
-        if (h > 0) {
-            return `${h}h ${m}m`;
-        }
+        if (h > 0) return `${h}h ${m}m`;
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
@@ -92,68 +97,64 @@ export default function BuildingSidePanel({
         const h = Math.floor(diffSeconds / 3600);
         const m = Math.floor((diffSeconds % 3600) / 60);
         const s = diffSeconds % 60;
-
-        if (h > 0) {
-            return `${h}h ${m}m`;
-        }
+        if (h > 0) return `${h}h ${m}m`;
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
     const handleTaxChange = async (bracket: string) => {
         if (isBusy) return;
-        try {
-            await api.post(`/player/taxes/bracket?bracket=${bracket}`);
-            fetchProfile();
-        } catch (err: any) {
-            alert(err.response?.data || "Failed to update tax bracket.");
-        }
+        try { await api.post(`/player/taxes/bracket?bracket=${bracket}`); fetchProfile(); }
+        catch (err: any) { alert(err.response?.data || "Failed to update tax bracket."); }
     };
 
     const handleCollectTaxes = async () => {
         if (isBusy) return;
-        try {
-            await api.post('/player/taxes/collect');
-            fetchProfile();
-        } catch (err: any) {
-            alert(err.response?.data || "Failed to collect taxes.");
-        }
+        try { await api.post('/player/taxes/collect'); fetchProfile(); }
+        catch (err: any) { alert(err.response?.data || "Failed to collect taxes."); }
     };
 
     const handleAssign = async () => {
         if (isBusy || !displayInstance) return;
-        try {
-            await api.post(`/player/building/assign?buildingId=${displayInstance.id}`);
-            fetchProfile();
-        } catch (err: any) {
-            alert(err.response?.data || "Failed to assign worker");
-        }
+        try { await api.post(`/player/building/assign?buildingId=${displayInstance.id}`); fetchProfile(); }
+        catch (err: any) { alert(err.response?.data || "Failed to assign worker"); }
     };
 
     const handleRemove = async () => {
         if (isBusy || !displayInstance) return;
-        try {
-            await api.post(`/player/building/remove?buildingId=${displayInstance.id}`);
-            fetchProfile();
-        } catch (err: any) {
-            alert(err.response?.data || "Failed to remove worker");
-        }
+        try { await api.post(`/player/building/remove?buildingId=${displayInstance.id}`); fetchProfile(); }
+        catch (err: any) { alert(err.response?.data || "Failed to remove worker"); }
     };
 
-    const canAfford = selectedGroup.cost
-        ? (profile?.wood >= selectedGroup.cost.wood && profile?.stone >= selectedGroup.cost.stone)
-        : true;
+    const handleUpgradeStart = async () => {
+        if (isBusy || !displayInstance) return;
+        try {
+            const url = selectedGroup.type === 'keep' ? `/player/keep/upgrade/start` : `/player/upgrade/start?buildingId=${displayInstance.id}`;
+            await api.post(url);
+            fetchProfile();
+        }
+        catch (err: any) { alert(err.response?.data || "Failed to start upgrade"); }
+    };
+
+    const handleUpgradeComplete = async () => {
+        if (isBusy || !displayInstance) return;
+        try { await api.post(`/player/upgrade/complete?buildingId=${displayInstance.id}`); fetchProfile(); }
+        catch (err: any) { alert(err.response?.data || "Failed to complete upgrade"); }
+    };
+
+    const canAfford = selectedGroup.cost ? (profile?.wood >= selectedGroup.cost.wood && profile?.stone >= selectedGroup.cost.stone) : true;
+    const canAffordUpgrade = displayInstance ? (profile?.wood >= displayInstance.nextLevelWoodCost && profile?.stone >= displayInstance.nextLevelStoneCost) : false;
+
+    const isKeepReqsMet = kr ? (kr.currentPopulation >= kr.reqPopulation && kr.currentValidHeroes >= kr.reqHeroCount && canAffordUpgrade) : false;
 
     const hapHigh = profile.maxHappiness * 0.75;
     const hapLow = profile.maxHappiness * 0.25;
 
-    // --- Dynamic Housing Calculations ---
     const isHouse = selectedGroup.type === 'house';
     let occupants = 0;
     let houseCapacity = 5;
 
     if (isHouse && displayInstance) {
         houseCapacity = Math.round(profile.maxPopulation / Math.max(1, profile.houses));
-        // Find which number house this is to "fill" them up sequentially
         const instanceIndex = profile.buildings?.filter(b => b.buildingType === 'house').findIndex(b => b.id === displayInstance.id) || 0;
         const previousOccupants = instanceIndex * houseCapacity;
         occupants = Math.max(0, Math.min(houseCapacity, profile.totalPopulation - previousOccupants));
@@ -169,43 +170,25 @@ export default function BuildingSidePanel({
                 </div>
             );
         }
-
         return (
             <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)', textAlign: 'center' }}>
                 <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-lg)', color: 'var(--accent-gold)' }}>AN ADVENTURER ARRIVES</h4>
-
                 <img src={tavernListing.portraitUrl || '/assets/hero.png'} alt={tavernListing.name} style={{ width: '100px', height: '100px', borderRadius: '8px', border: '2px solid var(--border-strong)', marginBottom: '16px' }} />
                 <h3 style={{ margin: '0 0 4px 0' }}>{tavernListing.name}</h3>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '24px' }}>{tavernListing.dndClass}</p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <button
-                        className="button"
-                        disabled={isBusy || profile.gold < tavernListing.goldCost}
-                        onClick={() => onRecruit && onRecruit('gold')}
-                        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '12px' }}
-                    >
+                    <button className="button" disabled={isBusy || profile.gold < tavernListing.goldCost} onClick={() => onRecruit && onRecruit('gold')} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '12px' }}>
                         Hire for {tavernListing.goldCost} <Icon name="gold" size={16} style={{ color: 'var(--accent-gold)' }} />
                     </button>
-
-                    <button
-                        className="button"
-                        disabled={isBusy || profile.gems < tavernListing.gemCost}
-                        onClick={() => onRecruit && onRecruit('gems')}
-                        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '12px' }}
-                    >
+                    <button className="button" disabled={isBusy || profile.gems < tavernListing.gemCost} onClick={() => onRecruit && onRecruit('gems')} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '12px' }}>
                         Hire for {tavernListing.gemCost} <Icon name="gems" size={16} style={{ color: '#a335ee' }} />
                     </button>
                 </div>
-
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '16px' }}>
-                    Expires in: {formatTimeRemaining(tavernListing.expiryTimeEpoch, now)}
-                </p>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '16px' }}>Expires in: {formatTimeRemaining(tavernListing.expiryTimeEpoch, now)}</p>
             </div>
         );
     };
-
-    const globalWorkerData = getGlobalWorkerCount(selectedGroup.type);
 
     return (
         <aside className="side-panel">
@@ -215,10 +198,7 @@ export default function BuildingSidePanel({
                         {displayInstance ? `${selectedGroup.singularName} (Lvl ${displayInstance.level})` : selectedGroup.name}
                     </h3>
                     {displayInstance && selectedGroup.instances.length > 1 && (
-                        <button
-                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, fontSize: '0.8rem', marginTop: '4px' }}
-                            onClick={() => onSelectInstance(null)}
-                        >
+                        <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, fontSize: '0.8rem', marginTop: '4px' }} onClick={() => onSelectInstance(null)}>
                             ← Back to overview
                         </button>
                     )}
@@ -228,9 +208,7 @@ export default function BuildingSidePanel({
 
             {!displayInstance && (
                 <>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        {selectedGroup.description}
-                    </p>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{selectedGroup.description}</p>
 
                     {selectedGroup.type === 'keep' && (
                         <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
@@ -238,14 +216,11 @@ export default function BuildingSidePanel({
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
                                     <span>Kingdom Happiness</span>
-                                    <span style={{ color: profile.happiness >= hapHigh ? 'var(--success)' : profile.happiness <= hapLow ? 'var(--danger)' : 'var(--text-primary)', fontWeight: 'bold' }}>
-                                        {profile.happiness} / {profile.maxHappiness}
-                                    </span>
+                                    <span style={{ color: profile.happiness >= hapHigh ? 'var(--success)' : profile.happiness <= hapLow ? 'var(--danger)' : 'var(--text-primary)', fontWeight: 'bold' }}>{profile.happiness} / {profile.maxHappiness}</span>
                                 </div>
                                 <div className="progress-bar-container">
                                     <div className="progress-bar-fill" style={{ width: `${(profile.happiness / profile.maxHappiness) * 100}%`, background: profile.happiness >= hapHigh ? 'var(--success)' : profile.happiness <= hapLow ? 'var(--danger)' : 'var(--accent-blue)', transition: 'width 0.5s ease-out' }}></div>
                                 </div>
-
                                 <div style={{ marginTop: '8px' }}>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Tax Policy:</div>
                                     <div style={{ display: 'flex', gap: '4px' }}>
@@ -254,27 +229,26 @@ export default function BuildingSidePanel({
                                         ))}
                                     </div>
                                 </div>
-
                                 <div style={{ background: 'var(--surface-1)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginTop: '8px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                         <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Pending Vault:</span>
                                         <span style={{ color: 'var(--accent-gold)', fontSize: '1.2rem', fontFamily: 'var(--font-heading)', fontWeight: 'bold' }}>{Math.floor(profile.pendingGold)} G</span>
                                     </div>
-                                    <button className="button button--claim" style={{ width: '100%' }} onClick={handleCollectTaxes} disabled={isBusy || (now - profile.lastTaxCollectionTimeEpoch) < 3600000}>
-                                        { (now - profile.lastTaxCollectionTimeEpoch) >= 3600000 ? 'Collect Taxes' : `Wait ${formatTimeRemainingTaxes(profile.lastTaxCollectionTimeEpoch + 3600000, now)}` }
+                                    <button className="button button--claim" style={{ width: '100%' }} onClick={handleCollectTaxes} disabled={isBusy || (profile.lastTaxCollectionTimeEpoch && now - profile.lastTaxCollectionTimeEpoch < 3600000)}>
+                                        { (profile.lastTaxCollectionTimeEpoch && now - profile.lastTaxCollectionTimeEpoch >= 3600000) ? 'Collect Taxes' : `Wait ${formatTimeRemainingTaxes((profile.lastTaxCollectionTimeEpoch||0) + 3600000, now)}` }
                                     </button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {globalWorkerData && (
+                    {getGlobalWorkerCount(selectedGroup.type) && (
                         <div className="panel" style={{ background: 'var(--bg-elevated)', marginTop: 'var(--space-md)' }}>
                             <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-sm)', color: 'var(--text-muted)' }}>KINGDOM LABOR</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-gold)' }}>
-                                    <span>{globalWorkerData.label}:</span>
-                                    <span>{globalWorkerData.count}</span>
+                                    <span>{getGlobalWorkerCount(selectedGroup.type)!.label}:</span>
+                                    <span>{getGlobalWorkerCount(selectedGroup.type)!.count}</span>
                                 </div>
                             </div>
                         </div>
@@ -284,13 +258,9 @@ export default function BuildingSidePanel({
                         <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>YOUR STRUCTURES</h4>
                         {selectedGroup.instances.length === 0 && (<span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>You don't have any of these structures.</span>)}
 
-                        {selectedGroup.instances.length === 1 && selectedGroup.type === 'tavern' ? (
+                        {selectedGroup.instances.length === 1 && (selectedGroup.type === 'tavern' || selectedGroup.type === 'keep') ? (
                             <button className="button" style={{ width: '100%', padding: '12px' }} onClick={() => onSelectInstance(selectedGroup.instances[0])}>
-                                Enter the Tavern
-                            </button>
-                        ) : selectedGroup.instances.length === 1 && selectedGroup.type === 'keep' ? (
-                            <button className="button" style={{ width: '100%', padding: '12px' }} onClick={() => onSelectInstance(selectedGroup.instances[0])}>
-                                View Vault Logistics
+                                {selectedGroup.type === 'tavern' ? 'Enter the Tavern' : 'View Vault & Upgrades'}
                             </button>
                         ) : (
                             selectedGroup.instances.map((instance, index) => (
@@ -327,9 +297,7 @@ export default function BuildingSidePanel({
                                         {profile.keepLevel < selectedGroup.unlockKeepLevel ? (
                                             <p style={{ fontSize: '0.8rem', color: 'var(--danger)', textAlign: 'center', margin: 0 }}>Requires Keep Lvl {selectedGroup.unlockKeepLevel}</p>
                                         ) : (
-                                            <>
-                                                <button className="button" style={{ width: '100%' }} onClick={() => onConstruct(selectedGroup.type)} disabled={isBusy || !canAfford}>+ Construct New</button>
-                                            </>
+                                            <button className="button" style={{ width: '100%' }} onClick={() => onConstruct(selectedGroup.type)} disabled={isBusy || !canAfford}>+ Construct New</button>
                                         )}
                                     </div>
                                 )
@@ -346,30 +314,25 @@ export default function BuildingSidePanel({
                             <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-md)', color: 'var(--text-muted)' }}>VAULT STORAGE</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {[
-                                    { label: 'Food', current: profile.food, pending: profile.pendingFood, color: 'var(--success)' },
-                                    { label: 'Wood', current: profile.wood, pending: profile.pendingWood, color: '#cd853f' },
-                                    { label: 'Stone', current: profile.stone, pending: profile.pendingStone, color: 'var(--text-muted)' },
-                                    { label: 'Gold', current: profile.gold, pending: profile.pendingGold, color: 'var(--accent-gold)' }
+                                    { label: 'Food', current: profile.food, pending: profile.pendingFood, color: 'var(--success)', isCapped: true },
+                                    { label: 'Wood', current: profile.wood, pending: profile.pendingWood, color: '#cd853f', isCapped: true },
+                                    { label: 'Stone', current: profile.stone, pending: profile.pendingStone, color: 'var(--text-muted)', isCapped: true },
+                                    { label: 'Gold', current: profile.gold, pending: profile.pendingGold, color: 'var(--accent-gold)', isCapped: false }
                                 ].map(res => (
                                     <div key={res.label}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
                                             <span>{res.label}</span>
-                                            <span>
-                                                <span style={{ color: (res.current + res.pending) >= profile.maxStorage ? 'var(--danger)' : 'inherit' }}>
-                                                    {Math.floor(res.current + res.pending)}
-                                                </span> / {profile.maxStorage}
-                                            </span>
+                                            {res.isCapped ? (
+                                                <span><span style={{ color: (res.current + res.pending) >= profile.maxStorage ? 'var(--danger)' : 'inherit' }}>{Math.floor(res.current + res.pending)}</span> / {profile.maxStorage}</span>
+                                            ) : (
+                                                <span style={{ color: res.color, fontWeight: 'bold' }}>{Math.floor(res.current + res.pending)} G</span>
+                                            )}
                                         </div>
-                                        <div className="progress-bar-container" style={{ height: '6px', background: 'var(--surface-2)' }}>
-                                            <div
-                                                className="progress-bar-fill"
-                                                style={{
-                                                    width: `${Math.min(100, ((res.current + res.pending) / profile.maxStorage) * 100)}%`,
-                                                    background: res.color,
-                                                    transition: 'width 1s linear' // Smooth real-time update
-                                                }}
-                                            ></div>
-                                        </div>
+                                        {res.isCapped && (
+                                            <div className="progress-bar-container" style={{ height: '6px', background: 'var(--surface-2)' }}>
+                                                <div className="progress-bar-fill" style={{ width: `${Math.min(100, ((res.current + res.pending) / profile.maxStorage) * 100)}%`, background: res.color, transition: 'width 1s linear' }}></div>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -397,9 +360,6 @@ export default function BuildingSidePanel({
                                         <button className="button" style={{ flex: 1 }} disabled={isBusy || displayInstance.assignedWorkers === 0} onClick={handleRemove}>- Remove</button>
                                         <button className="button" style={{ flex: 1 }} disabled={isBusy || displayInstance.assignedWorkers === displayInstance.maxWorkers || getUnassignedCount(selectedGroup.type) === 0} onClick={handleAssign}>+ Assign</button>
                                     </div>
-                                    {getUnassignedCount(selectedGroup.type) === 0 && displayInstance.assignedWorkers < displayInstance.maxWorkers && (
-                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>No available {getWorkerName(selectedGroup.type)} trained.</p>
-                                    )}
                                 </div>
                             )}
                             {displayInstance.productionRate > 0 && (
@@ -411,9 +371,67 @@ export default function BuildingSidePanel({
                         </div>
                     ) : null}
 
+                    {/* UPGRADE INTERFACE */}
                     <div style={{ marginTop: 'auto' }}>
-                        <button className="button--primary" style={{ width: '100%' }} disabled>UPGRADE TO LV.{displayInstance.level + 1}</button>
-                        <p style={{ fontSize: '0.7rem', textAlign: 'center', marginTop: 'var(--space-sm)', color: 'var(--text-muted)' }}>{selectedGroup.type === 'keep' ? 'Upgrade requirements Not Met' : `Requires Keep Lvl ${displayInstance.level + 1}`}</p>
+                        {activeUpgrade ? (
+                            <div className="panel" style={{ background: 'var(--bg-elevated)', padding: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                                    <span style={{ color: 'var(--accent-gold)' }}>Upgrading to Lv.{activeUpgrade.targetLevel}...</span>
+                                    <span style={{ fontFamily: 'monospace' }}>{formatTimeRemaining(activeUpgrade.completionTimeEpoch, now)}</span>
+                                </div>
+                                <div className="progress-bar-container">
+                                    <div className={`progress-bar-fill ${now >= activeUpgrade.completionTimeEpoch ? 'ready' : ''}`} style={{ width: `${calculateProgress(activeUpgrade.startTimeEpoch, activeUpgrade.completionTimeEpoch, now)}%` }}></div>
+                                </div>
+                                {now >= activeUpgrade.completionTimeEpoch && (
+                                    <button className="button button--claim" style={{ width: '100%', marginTop: 'var(--space-md)' }} onClick={handleUpgradeComplete} disabled={isBusy}>Complete Upgrade</button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="panel" style={{ background: 'var(--bg-elevated)', padding: '12px', border: '1px solid var(--border-strong)' }}>
+                                <h4 style={{ fontSize: '0.8rem', marginBottom: 'var(--space-sm)', color: 'var(--text-muted)' }}>UPGRADE REQUIREMENTS</h4>
+
+                                {selectedGroup.type === 'keep' ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem', marginBottom: '12px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Population:</span>
+                                            <span style={{ color: kr?.currentPopulation! >= kr?.reqPopulation! ? 'var(--success)' : 'var(--danger)' }}>{kr?.currentPopulation} / {kr?.reqPopulation}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Lv.{kr?.reqHeroLevel}+ Heroes:</span>
+                                            <span style={{ color: kr?.currentValidHeroes! >= kr?.reqHeroCount! ? 'var(--success)' : 'var(--danger)' }}>{kr?.currentValidHeroes} / {kr?.reqHeroCount}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Treasury Cost:</span>
+                                            <span style={{ color: canAffordUpgrade ? 'var(--text-secondary)' : 'var(--danger)' }}>{kr?.reqWood} Wood, {kr?.reqStone} Stone</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', borderTop: '1px solid var(--border-subtle)', paddingTop: '4px' }}>
+                                            <span>Est. Time:</span>
+                                            <span style={{ color: 'var(--accent-gold)' }}>{kr ? Math.floor(kr.upgradeTimeSeconds / 3600) : 0} Hours</span>
+                                        </div>
+                                        <button className="button--primary" style={{ width: '100%', marginTop: '8px' }} disabled={isBusy || !isKeepReqsMet} onClick={handleUpgradeStart}>
+                                            ERA SHIFT TO LV.{displayInstance.level + 1}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem', marginBottom: '12px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Cost:</span>
+                                            <span style={{ color: canAffordUpgrade ? 'var(--text-secondary)' : 'var(--danger)' }}>{displayInstance.nextLevelWoodCost} Wood, {displayInstance.nextLevelStoneCost} Stone</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Time:</span>
+                                            <span style={{ color: 'var(--accent-gold)' }}>{Math.floor(displayInstance.nextLevelTimeSeconds / 60)}m {displayInstance.nextLevelTimeSeconds % 60 > 0 ? `${displayInstance.nextLevelTimeSeconds % 60}s` : ''}</span>
+                                        </div>
+                                        <button className="button--primary" style={{ width: '100%', marginTop: '8px' }} disabled={isBusy || !canAffordUpgrade || profile.keepLevel < displayInstance.level + 1} onClick={handleUpgradeStart}>
+                                            UPGRADE TO LV.{displayInstance.level + 1}
+                                        </button>
+                                        {profile.keepLevel < displayInstance.level + 1 && (
+                                            <p style={{ fontSize: '0.75rem', color: 'var(--danger)', textAlign: 'center', margin: 0, marginTop: '4px' }}>Requires Keep Lvl {displayInstance.level + 1}</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </>
             )}

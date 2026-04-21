@@ -46,6 +46,32 @@ export interface BuildingInstance {
     assignedWorkers: number;
     maxWorkers: number;
     productionRate: number;
+    nextLevelWoodCost: number;
+    nextLevelStoneCost: number;
+    nextLevelTimeSeconds: number;
+}
+
+// --- NEW DTOs FOR UPGRADES ---
+export interface UpgradeTaskResponse {
+    buildingInstanceId: string;
+    buildingType: string;
+    targetLevel: number;
+    startTimeEpoch: number;
+    completionTimeEpoch: number;
+}
+
+export interface KeepUpgradeRequirementsResponse {
+    targetLevel: number;
+    reqPopulation: number;
+    currentPopulation: number;
+    reqHeroCount: number;
+    reqHeroLevel: number;
+    currentValidHeroes: number;
+    reqWood: number;
+    reqStone: number;
+    currentWood: number;
+    currentStone: number;
+    upgradeTimeSeconds: number;
 }
 
 export interface PlayerProfile {
@@ -81,20 +107,23 @@ export interface PlayerProfile {
     towers: number;
     bakeries: number;
     huntingLodges: number;
-    buildings: { id: string, buildingType: string, level: number, assignedWorkers: number }[];
+    buildings: { id: string, buildingType: string, level: number, assignedWorkers: number, nextLevelWoodCost: number, nextLevelStoneCost: number, nextLevelTimeSeconds: number }[];
 
     activeConstructions?: ConstructionTaskResponse[];
     activeTrainingTasks?: TrainingTaskResponse[];
     trainingConfigs?: TrainingConfigResponse[];
     buildingConfigs?: BuildingConfigResponse[];
 
-    // NEW: Ledger History
     ledgerEvents?: {
         id: string;
         timestampEpoch: number;
         category: string;
         message: string;
     }[];
+
+    // --- NEW FIELDS MAPPED ---
+    activeUpgrades?: UpgradeTaskResponse[];
+    keepUpgradeRequirements?: KeepUpgradeRequirementsResponse;
 }
 
 export interface BuildingCost {
@@ -122,7 +151,6 @@ export interface KingdomEvent {
     type: string;
 }
 
-// DTO for the hero waiting in the Tavern
 export interface TavernListing {
     listingId: string;
     name: string;
@@ -142,7 +170,6 @@ export default function KingdomView() {
     const [isBusy, setIsBusy] = useState(false);
     const [now, setNow] = useState(Date.now());
 
-    // Tavern State
     const [tavernListing, setTavernListing] = useState<TavernListing | null>(null);
     const [gachaResult, setGachaResult] = useState<Character | null>(null);
 
@@ -151,23 +178,16 @@ export default function KingdomView() {
         return () => clearInterval(timer);
     }, []);
 
-    // Check for tavern arrivals when the kingdom view loads or when a construction completes
     useEffect(() => {
         const fetchTavern = async () => {
             try {
                 const res = await api.get('/tavern');
-                // HTTP 204 No Content means no hero is waiting
-                if (res.status === 204) {
-                    setTavernListing(null);
-                } else {
-                    setTavernListing(res.data);
-                }
-            } catch (err) {
-                console.error("Failed to fetch tavern data");
-            }
+                if (res.status === 204) setTavernListing(null);
+                else setTavernListing(res.data);
+            } catch (err) { console.error("Failed to fetch tavern data"); }
         };
         fetchTavern();
-    }, [profile?.buildings.length]); // Re-fetch if building count changes (e.g., Tavern finishes building)
+    }, [profile?.buildings.length]);
 
     const handleTabChange = (tab: 'buildings' | 'citizens') => {
         setActiveTab(tab);
@@ -183,11 +203,12 @@ export default function KingdomView() {
     const bakeryConfig = getBuildingConfig('bakery');
     const lodgeConfig = getBuildingConfig('lodge');
     const tavernConfig = getBuildingConfig('tavern');
+    const towerConfig = getBuildingConfig('tower');
 
     const canCollectTaxes = profile?.lastTaxCollectionTimeEpoch ? (now - profile.lastTaxCollectionTimeEpoch) >= 3600000 : false;
 
     const mapInstances = (type: string, config: any): BuildingInstance[] => {
-        if (type === 'keep') return [{ id: 'keep-1', level: profile?.keepLevel || 1, assignedWorkers: 0, maxWorkers: 0, productionRate: 0 }];
+        if (type === 'keep') return [{ id: 'keep-1', level: profile?.keepLevel || 1, assignedWorkers: 0, maxWorkers: 0, productionRate: 0, nextLevelWoodCost: profile?.keepUpgradeRequirements?.reqWood || 0, nextLevelStoneCost: profile?.keepUpgradeRequirements?.reqStone || 0, nextLevelTimeSeconds: profile?.keepUpgradeRequirements?.upgradeTimeSeconds || 0 }];
 
         return (profile?.buildings || [])
             .filter(b => b.buildingType.toLowerCase() === type.toLowerCase())
@@ -196,7 +217,10 @@ export default function KingdomView() {
                 level: b.level,
                 assignedWorkers: b.assignedWorkers,
                 maxWorkers: config?.maxWorkers || 0,
-                productionRate: config?.productionRate || 0
+                productionRate: config?.productionRate || 0,
+                nextLevelWoodCost: b.nextLevelWoodCost,
+                nextLevelStoneCost: b.nextLevelStoneCost,
+                nextLevelTimeSeconds: b.nextLevelTimeSeconds
             }));
     };
 
@@ -242,6 +266,16 @@ export default function KingdomView() {
             unlockKeepLevel: lodgeConfig?.unlockKeepLevel || 1
         },
         {
+            type: 'tower',
+            name: 'Watchtowers',
+            singularName: 'Tower',
+            icon: 'combat',
+            description: 'Provides massive passive defense for your kingdom against raids.',
+            cost: towerConfig ? { wood: towerConfig.woodCost, stone: towerConfig.stoneCost, timeSeconds: towerConfig.buildTimeSeconds } : undefined,
+            instances: mapInstances('tower', towerConfig),
+            unlockKeepLevel: towerConfig?.unlockKeepLevel || 3
+        },
+        {
             type: 'tavern',
             name: 'The Tavern',
             singularName: 'Tavern',
@@ -249,15 +283,13 @@ export default function KingdomView() {
             description: 'Attracts wandering adventurers who can be recruited into your party.',
             cost: tavernConfig ? { wood: tavernConfig.woodCost, stone: tavernConfig.stoneCost, timeSeconds: tavernConfig.buildTimeSeconds } : undefined,
             instances: mapInstances('tavern', tavernConfig),
-            isActionReady: tavernListing != null, // Show a notification dot if a hero is waiting!
-            unlockKeepLevel: tavernConfig?.unlockKeepLevel ?? 1 // Follow config strictly
+            isActionReady: tavernListing != null,
+            unlockKeepLevel: tavernConfig?.unlockKeepLevel ?? 1
         }
     ];
 
-    // Dynamically derive the selected group object from the freshly mapped buildingGroups array
     const selectedGroup = buildingGroups.find(g => g.type === selectedGroupType) || null;
 
-    // Map backend ledger timestamps to the requested roleplay style
     const formatTimestamp = (epoch: number) => {
         const d = new Date(epoch);
         const pad = (n: number) => n.toString().padStart(2, '0');
@@ -274,45 +306,25 @@ export default function KingdomView() {
     const handleConstruct = async (type: string) => {
         if (isBusy) return;
         setIsBusy(true);
-        try {
-            await api.post(`/player/construct?buildingType=${type}`);
-            fetchProfile();
-        } catch (err: any) {
-            alert(err.response?.data || "Failed to start construction");
-        } finally { setIsBusy(false); }
+        try { await api.post(`/player/construct?buildingType=${type}`); fetchProfile(); } catch (err: any) { alert(err.response?.data || "Failed to start construction"); } finally { setIsBusy(false); }
     };
 
     const handleComplete = async (type: string) => {
         if (isBusy) return;
         setIsBusy(true);
-        try {
-            await api.post(`/player/construct/complete?buildingType=${type}`);
-            fetchProfile();
-        } catch (err: any) {
-            alert(err.response?.data || "Failed to complete construction");
-        } finally { setIsBusy(false); }
+        try { await api.post(`/player/construct/complete?buildingType=${type}`); fetchProfile(); } catch (err: any) { alert(err.response?.data || "Failed to complete construction"); } finally { setIsBusy(false); }
     };
 
-    // --- THE GACHA TRANSACTION ---
     const handleRecruitHero = async (currencyType: 'gold' | 'gems') => {
         if (isBusy) return;
         setIsBusy(true);
         try {
-            // The backend instantly does the math and returns the full D&D Character DTO
             const res = await api.post(`/tavern/recruit?currencyType=${currencyType}`);
-
-            // Clear the tavern listing
             setTavernListing(null);
             fetchProfile();
-
-            // Trigger the Universal Modal with the pulled character!
             setGachaResult(res.data);
-            setSelectedGroupType(null); // Close the side panel to focus on the modal
-        } catch (err: any) {
-            alert(err.response?.data || "Failed to recruit hero");
-        } finally {
-            setIsBusy(false);
-        }
+            setSelectedGroupType(null);
+        } catch (err: any) { alert(err.response?.data || "Failed to recruit hero"); } finally { setIsBusy(false); }
     };
 
     return (
@@ -331,10 +343,7 @@ export default function KingdomView() {
                                 selectedGroup={selectedGroup}
                                 activeConstructions={profile?.activeConstructions}
                                 now={now}
-                                onSelectGroup={(group) => {
-                                    setSelectedGroupType(group.type);
-                                    setSelectedInstance(null);
-                                }}
+                                onSelectGroup={(group) => { setSelectedGroupType(group.type); setSelectedInstance(null); }}
                             />
                             <RoyalLedger events={events} />
                         </>
@@ -352,10 +361,7 @@ export default function KingdomView() {
                         isBusy={isBusy}
                         tavernListing={tavernListing}
                         onRecruit={handleRecruitHero}
-                        onClose={() => {
-                            setSelectedGroupType(null);
-                            setSelectedInstance(null);
-                        }}
+                        onClose={() => { setSelectedGroupType(null); setSelectedInstance(null); }}
                         onSelectInstance={setSelectedInstance}
                         onConstruct={handleConstruct}
                         onComplete={handleComplete}
@@ -363,12 +369,7 @@ export default function KingdomView() {
                     />
                 )}
             </div>
-
-            {/* THE UNIVERSAL GACHA THEATER */}
-            <UniversalGachaModal
-                character={gachaResult}
-                onAccept={() => setGachaResult(null)}
-            />
+            <UniversalGachaModal character={gachaResult} onAccept={() => setGachaResult(null)} />
         </>
     );
 }
