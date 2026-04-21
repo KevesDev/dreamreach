@@ -18,7 +18,7 @@ public class GameKeepConfig {
 
     // --- HERO ROSTER SCALING (Horizontal Progression) ---
     // Formula: baseHeroCount * (targetLevel ^ heroCountExponent)
-    private int baseHeroCount = 2;
+    private int baseHeroCount = 1;
     private double heroCountExponent = 1.2;
 
     // --- HERO LEVEL SCALING (Vertical Progression) ---
@@ -28,8 +28,8 @@ public class GameKeepConfig {
 
     // --- RESOURCE COST SCALING ---
     // Formula: baseCost * (targetLevel ^ costExponent)
-    private int baseWoodCost = 500;
-    private int baseStoneCost = 500;
+    private int baseWoodCost = 200;
+    private int baseStoneCost = 200;
     private double costExponent = 1.5;
 
     // The Safety Valve: Mathematically guarantees that a Keep upgrade's cost
